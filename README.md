@@ -2,7 +2,9 @@
 
 A small LangChain-based project that uses RAG (Retrieval-Augmented Generation) over my CV and target job descriptions to:
 
-- Answer questions like “Why am I a good fit for this role?”
+- Answer questions like:
+  - “Why are you a good fit for this role?”
+  - “List 3 relevant experiences for this JD.”
 - Surface relevant experience for specific JDs
 - Run simple evaluations over a fixed question set
 
