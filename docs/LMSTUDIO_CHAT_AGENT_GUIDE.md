@@ -143,6 +143,16 @@ Returns high-risk and medium-risk students with grades, attendance, balance due,
 
 Use case: safer than asking the model to invent a risk SQL query.
 
+### `analyze_at_risk_students`
+
+Returns:
+
+- Structured at-risk student rows.
+- Retrieved advising notes and risk/intervention policy context.
+- Guidance for using the evidence.
+
+Use this when the user asks **why** students are at risk or asks for next actions.
+
 ### `get_scholarship_candidates`
 
 Returns students who qualify for scholarship support using the correct condition:
@@ -152,6 +162,20 @@ scholarship_candidate = 1
 ```
 
 Use case: safer than asking the model to guess whether the flag is `yes`, `true`, or `1`.
+
+This is a raw structured-data tool. If LM Studio calls this tool, it may answer from SQL rows only and skip policy/vector context.
+
+### `analyze_scholarship_candidates`
+
+Returns:
+
+- Structured scholarship candidate rows.
+- Retrieved scholarship policy context.
+- Guidance to say `weighted average score` instead of `GPA` unless the user specifically asks for GPA.
+
+Use this when the user asks for eligibility explanation or policy support.
+
+For most natural scholarship questions, prefer this tool over `get_scholarship_candidates`.
 
 ### `retrieve_notes`
 
@@ -204,12 +228,18 @@ Ask natural questions. Mention the tool server name if LM Studio does not choose
 
 Good examples:
 
-- `Using the student-management-rag tools, call get_at_risk_students and explain who is at risk and why.`
+- `Using the student-management-rag tools, call analyze_at_risk_students and explain who is at risk and why.`
 - `Using the student-management-rag tools, show course performance by average score and attendance.`
-- `Using the student-management-rag tools, call get_scholarship_candidates and explain the policy.`
+- `Using the student-management-rag tools, call analyze_scholarship_candidates and explain the policy.`
 - `Using the student-management-rag tools, create an attendance trend chart for high-risk students.`
 
 Avoid asking the model to write directly to the database. This sample intentionally supports read-only analysis.
+
+If LM Studio keeps calling `get_scholarship_candidates`, make the prompt stricter:
+
+```text
+Using the student-management-rag tools, do not call get_scholarship_candidates. Call analyze_scholarship_candidates and use its policy context. Use "weighted average score", not GPA.
+```
 
 ## 9. Troubleshooting
 
@@ -258,6 +288,12 @@ Or use:
 
 ```sql
 WHERE scholarship_candidate = 1
+```
+
+If you also want policy context, ask:
+
+```text
+Using the student-management-rag tools, call analyze_scholarship_candidates and explain the eligibility criteria.
 ```
 
 ### Tool Calls Are Weird Or Repeated

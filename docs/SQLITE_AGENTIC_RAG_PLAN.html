@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SQLite Agentic RAG Sample</title>
+  <title>SQLite Agentic RAG Sample Design</title>
   <style>
     body {
       color: #1f2937;
@@ -28,7 +28,7 @@
     }
     svg {
       display: block;
-      min-width: 860px;
+      min-width: 960px;
     }
     .box {
       fill: #f9fafb;
@@ -55,7 +55,7 @@
   </style>
 </head>
 <body>
-  <h1>SQLite Agentic RAG Sample</h1>
+  <h1>SQLite Agentic RAG Sample Design</h1>
 
   <h2>Recommended Dataset</h2>
   <p>Use <strong>Student Management</strong> because it naturally mixes structured analytics and unstructured evidence.</p>
@@ -76,47 +76,74 @@
 
   <h2>Target Architecture</h2>
   <div class="diagram">
-    <svg viewBox="0 0 900 620" role="img" aria-label="Target Architecture diagram">
+    <svg viewBox="0 0 980 760" role="img" aria-label="Target Architecture diagram">
       <defs>
         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
           <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
         </marker>
       </defs>
 
-      <rect class="box" x="360" y="20" width="180" height="48"></rect>
-      <text class="label" x="450" y="50">User Question</text>
+      <rect class="box" x="400" y="20" width="180" height="48"></rect>
+      <text class="label" x="490" y="50">User Question</text>
 
-      <rect class="box" x="360" y="100" width="180" height="48"></rect>
-      <text class="label" x="450" y="130">Plan And Decompose</text>
+      <rect class="box" x="400" y="100" width="180" height="48"></rect>
+      <text class="label" x="490" y="130">Runtime Choice</text>
 
-      <rect class="box" x="120" y="200" width="180" height="48"></rect>
-      <text class="label" x="210" y="230">Query SQLite</text>
+      <rect class="box" x="80" y="200" width="190" height="54"></rect>
+      <text class="label" x="175" y="225">student_rag.agent</text>
+      <text class="label" x="175" y="242">Deterministic CLI</text>
 
-      <rect class="box" x="600" y="200" width="180" height="48"></rect>
-      <text class="label" x="690" y="230">Query Chroma Embeddings</text>
+      <rect class="box" x="395" y="200" width="190" height="54"></rect>
+      <text class="label" x="490" y="225">student_rag.lmstudio_agent</text>
+      <text class="label" x="490" y="242">Python API Tool Loop</text>
 
-      <rect class="box" x="360" y="300" width="180" height="48"></rect>
-      <text class="label" x="450" y="330">Structured Evidence</text>
+      <rect class="box" x="710" y="200" width="190" height="54"></rect>
+      <text class="label" x="805" y="225">student_rag.mcp_server</text>
+      <text class="label" x="805" y="242">LM Studio Chat MCP</text>
 
-      <rect class="box" x="360" y="380" width="180" height="48"></rect>
-      <text class="label" x="450" y="410">Table Or Chart Decision</text>
+      <rect class="box" x="80" y="330" width="190" height="54"></rect>
+      <text class="label" x="175" y="355">SQLite Tools</text>
+      <text class="label" x="175" y="372">run_sql, views</text>
 
-      <rect class="box" x="360" y="460" width="180" height="48"></rect>
-      <text class="label" x="450" y="490">Replan If Missing Evidence</text>
+      <rect class="box" x="395" y="330" width="190" height="54"></rect>
+      <text class="label" x="490" y="355">High-Level MCP Tools</text>
+      <text class="label" x="490" y="372">risk, scholarship</text>
 
-      <rect class="box" x="360" y="540" width="180" height="48"></rect>
-      <text class="label" x="450" y="570">Final Answer With Sources</text>
+      <rect class="box" x="710" y="330" width="190" height="54"></rect>
+      <text class="label" x="805" y="355">Chroma Tools</text>
+      <text class="label" x="805" y="372">retrieve_notes</text>
 
-      <path class="arrow" d="M450 68 L450 100"></path>
-      <path class="arrow" d="M405 148 L255 200"></path>
-      <path class="arrow" d="M495 148 L645 200"></path>
-      <path class="arrow" d="M300 224 L360 315"></path>
-      <path class="arrow" d="M600 224 L540 315"></path>
-      <path class="arrow" d="M450 348 L450 380"></path>
-      <path class="arrow" d="M450 428 L450 460"></path>
-      <path class="arrow" d="M450 508 L450 540"></path>
-      <path class="arrow" d="M360 484 C210 450 190 310 210 248"></path>
-      <path class="arrow" d="M540 484 C690 450 710 310 690 248"></path>
+      <rect class="box" x="80" y="455" width="190" height="54"></rect>
+      <text class="label" x="175" y="480">SQLite DB</text>
+      <text class="label" x="175" y="497">student_management.sqlite</text>
+
+      <rect class="box" x="710" y="455" width="190" height="54"></rect>
+      <text class="label" x="805" y="480">Vector Store</text>
+      <text class="label" x="805" y="497">chroma_student_db</text>
+
+      <rect class="box" x="395" y="540" width="190" height="54"></rect>
+      <text class="label" x="490" y="565">Evidence Bundle</text>
+      <text class="label" x="490" y="582">SQL + Notes + Sources</text>
+
+      <rect class="box" x="395" y="645" width="190" height="54"></rect>
+      <text class="label" x="490" y="670">Final Answer</text>
+      <text class="label" x="490" y="687">Table Or Chart</text>
+
+      <path class="arrow" d="M490 68 L490 100"></path>
+      <path class="arrow" d="M400 148 L220 200"></path>
+      <path class="arrow" d="M490 148 L490 200"></path>
+      <path class="arrow" d="M580 148 L760 200"></path>
+      <path class="arrow" d="M175 254 L175 330"></path>
+      <path class="arrow" d="M490 254 L175 330"></path>
+      <path class="arrow" d="M490 254 L805 330"></path>
+      <path class="arrow" d="M805 254 L490 330"></path>
+      <path class="arrow" d="M805 254 L805 330"></path>
+      <path class="arrow" d="M490 384 L175 455"></path>
+      <path class="arrow" d="M175 384 L175 455"></path>
+      <path class="arrow" d="M805 384 L805 455"></path>
+      <path class="arrow" d="M270 482 L395 565"></path>
+      <path class="arrow" d="M710 482 L585 565"></path>
+      <path class="arrow" d="M490 594 L490 645"></path>
     </svg>
   </div>
 
@@ -125,12 +152,34 @@
     <li>Add a small sample dataset under <code>data/student_management/</code> with CSV seed files and text or Markdown notes and policies for embedding retrieval.</li>
     <li>Add <code>scripts/build_student_db.py</code> to create <code>student_management.sqlite</code> from the seed files using Python <code>sqlite3</code>, including useful views such as <code>student_risk_summary</code>.</li>
     <li>Add vector ingestion for unstructured student data using HuggingFace embeddings and a separate Chroma directory such as <code>chroma_student_db/</code>.</li>
+    <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, retrieval, artifacts, LM Studio configuration, and paths.</li>
     <li>Add <code>student_rag.agent</code> with tools for <code>plan_question</code>, <code>run_sql</code>, <code>retrieve_notes</code>, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
+    <li>Add <code>student_rag.mcp_server</code> so LM Studio Chat can call local Student Management tools through MCP.</li>
     <li>Add demo questions and evaluation examples in <code>eval/student_questions.json</code>.</li>
     <li>Update docs with setup, workflow diagram, dataset description, and example prompts.</li>
   </ol>
 
   <h2>Scope Boundary</h2>
   <p>Keep the first version local and lightweight: SQLite from the standard library, Chroma for embeddings, LM Studio through the existing OpenAI-compatible config, and chart output as a simple Vega-Lite JSON spec or saved PNG only if visualization is needed in the demo.</p>
+
+  <h2>Current MCP Tools</h2>
+  <ul>
+    <li><code>get_schema_summary</code>: returns tables, views, columns, and value hints.</li>
+    <li><code>run_sql</code>: executes one read-only SQL query and returns warnings for suspicious values such as <code>scholarship_candidate = 'yes'</code>.</li>
+    <li><code>get_at_risk_students</code>: returns high-risk and medium-risk students using the correct risk rules.</li>
+    <li><code>analyze_at_risk_students</code>: returns at-risk student rows plus advising notes and intervention policy context.</li>
+    <li><code>get_scholarship_candidates</code>: returns scholarship candidates using <code>scholarship_candidate = 1</code>.</li>
+    <li><code>analyze_scholarship_candidates</code>: returns scholarship candidate rows plus scholarship policy context.</li>
+    <li><code>retrieve_notes</code>: searches advising notes, policies, and course descriptions.</li>
+    <li><code>generate_artifact</code>: creates a Markdown table or Vega-Lite chart spec from SQL results.</li>
+  </ul>
+
+  <h2>Schema Value Hints</h2>
+  <ul>
+    <li><code>student_risk_summary.risk_level</code> uses <code>high</code>, <code>medium</code>, and <code>low</code>.</li>
+    <li><code>student_risk_summary.scholarship_candidate</code> is an integer flag: <code>1</code> means yes and <code>0</code> means no.</li>
+    <li><code>student_risk_summary.term</code> uses values such as <code>2026-Spring</code>; there is no <code>current_term</code>.</li>
+    <li><code>fee_summary.status</code> uses <code>paid</code>, <code>partial</code>, and <code>overdue</code>.</li>
+  </ul>
 </body>
 </html>

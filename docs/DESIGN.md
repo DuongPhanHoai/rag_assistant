@@ -41,6 +41,7 @@ flowchart TD
     Planner --> Decomposer["Decomposer: decompose_query_request"]
     ToolAgent --> LmToolLoop["LM Studio Tool Loop"]
     McpServer --> LmStudioChat["LM Studio Chat MCP Host"]
+    McpServer --> HighLevelTools["High-Level MCP Tools"]
 
     CsvData["CSV Seed Data"] --> DbBuilder["ELT Script: build_student_db.py"]
     DbBuilder --> SQLiteDb["SQLite DB: student_management.sqlite"]
@@ -57,6 +58,8 @@ flowchart TD
     LmToolLoop --> VectorTool
     LmStudioChat --> SqlTool
     LmStudioChat --> VectorTool
+    LmStudioChat --> HighLevelTools
+    HighLevelTools --> SqlTool
     SqlTool --> Evidence["Evidence Bundle"]
     VectorTool --> Evidence
 
@@ -130,6 +133,13 @@ The raw tables stay normalized. The script also creates analytical views that ma
 - `course_performance_summary`
 - `attendance_trend`
 
+`get_schema_summary()` includes value hints that are important for local models:
+
+- `student_risk_summary.risk_level` uses text values: `high`, `medium`, `low`.
+- `student_risk_summary.scholarship_candidate` uses integer values: `1` means yes, `0` means no.
+- `student_risk_summary.term` uses values such as `2026-Spring`; there is no `current_term` value.
+- `fee_summary.status` uses text values: `paid`, `partial`, `overdue`.
+
 ### Vector Index
 
 `student_rag.retrieval` loads Markdown documents, splits them into chunks, embeds the chunks with `sentence-transformers/all-MiniLM-L6-v2`, and persists them in `chroma_student_db/`. `scripts/build_student_vectors.py` is a thin command wrapper.
@@ -158,8 +168,16 @@ The raw tables stay normalized. The script also creates analytical views that ma
 
 - `get_schema_summary`
 - `run_sql`
+- `get_at_risk_students`
+- `analyze_at_risk_students`
+- `get_scholarship_candidates`
+- `analyze_scholarship_candidates`
 - `retrieve_notes`
 - `generate_artifact`
+
+The high-level MCP tools reduce common model mistakes. For example, `get_scholarship_candidates` uses the correct condition `scholarship_candidate = 1` instead of relying on the model to guess whether the flag is `yes`, `true`, or `1`.
+
+The `analyze_*` MCP tools combine structured SQL results with retrieved vector context. They are preferred for LM Studio Chat questions that ask for explanations, reasons, policy support, or next actions.
 
 ## 6. Runtime Flow
 
@@ -256,6 +274,7 @@ The SQL tool is intentionally conservative:
 - SQL must start with `SELECT` or `WITH`.
 - Mutating keywords such as `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, and `CREATE` are rejected.
 - Results are capped by `MAX_SQL_ROWS`.
+- SQL results can include warnings for suspicious value usage, such as `scholarship_candidate = 'yes'`.
 
 This keeps the demo safe while still showing how an agent can use structured data.
 
