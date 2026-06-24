@@ -166,6 +166,7 @@ The raw tables stay normalized. The script also creates analytical views that ma
 
 `student_rag.mcp_server` exposes the same low-level tools as an MCP server so users can ask questions directly inside LM Studio Chat:
 
+- `ask_student_management`
 - `get_schema_summary`
 - `run_sql`
 - `get_at_risk_students`
@@ -174,6 +175,8 @@ The raw tables stay normalized. The script also creates analytical views that ma
 - `analyze_scholarship_candidates`
 - `retrieve_notes`
 - `generate_artifact`
+
+`ask_student_management` is the default plain-language tool. It routes common risk, scholarship, attendance, course, and fee questions to the right structured and vector evidence internally.
 
 The high-level MCP tools reduce common model mistakes. For example, `get_scholarship_candidates` uses the correct condition `scholarship_candidate = 1` instead of relying on the model to guess whether the flag is `yes`, `true`, or `1`.
 
@@ -288,6 +291,24 @@ This keeps the demo safe while still showing how an agent can use structured dat
 - Attendance trend chart generation.
 
 `eval_student_run.py` appends each run to `eval/student_results.jsonl` with the question, answer, plan, SQL, artifact type, and sources.
+
+### Risk Answer Rubric
+
+Risk answers should explain both high-risk triggers and medium-risk indicators.
+
+High-risk triggers:
+
+- `avg_score < 70`
+- `attendance_pct < 75`
+- `balance_due > 500`
+
+Medium-risk indicators:
+
+- `avg_score < 80`
+- `attendance_pct < 85`
+- `balance_due > 0`
+
+`risk_reasons` is intentionally focused on high-risk reasons and can be empty for medium-risk students. An answer should not say a medium-risk student has "no reason" only because `risk_reasons` is empty. Instead, it should infer the medium-risk explanation from the metrics.
 
 ## 10. Generated Artifacts
 

@@ -114,6 +114,12 @@ Using the student-management-rag tools, create a chart of attendance trend by mo
 
 `student_rag.mcp_server` exposes these tools:
 
+### `ask_student_management`
+
+Default tool for plain-language questions.
+
+Use this first for normal chat questions about risk, scholarships, attendance, course performance, fees, advising notes, policies, tables, or charts. It routes common questions to the right SQL and vector evidence internally.
+
 ### `get_schema_summary`
 
 Returns available SQLite tables, views, and columns.
@@ -228,9 +234,9 @@ Ask natural questions. Mention the tool server name if LM Studio does not choose
 
 Good examples:
 
-- `Using the student-management-rag tools, call analyze_at_risk_students and explain who is at risk and why.`
+- `Using the student-management-rag tools, which students are at risk this term and why?`
 - `Using the student-management-rag tools, show course performance by average score and attendance.`
-- `Using the student-management-rag tools, call analyze_scholarship_candidates and explain the policy.`
+- `Using the student-management-rag tools, who qualifies for scholarship support based on score, attendance, and fee status?`
 - `Using the student-management-rag tools, create an attendance trend chart for high-risk students.`
 
 Avoid asking the model to write directly to the database. This sample intentionally supports read-only analysis.
@@ -238,10 +244,34 @@ Avoid asking the model to write directly to the database. This sample intentiona
 If LM Studio keeps calling `get_scholarship_candidates`, make the prompt stricter:
 
 ```text
-Using the student-management-rag tools, do not call get_scholarship_candidates. Call analyze_scholarship_candidates and use its policy context. Use "weighted average score", not GPA.
+Using the student-management-rag tools, call ask_student_management for this question. Use "weighted average score", not GPA.
 ```
 
-## 9. Troubleshooting
+## 9. Answer Quality Checks
+
+For risk answers, a good answer should explain both high-risk and medium-risk students.
+
+High-risk triggers:
+
+- `avg_score < 70`
+- `attendance_pct < 75`
+- `balance_due > 500`
+
+Medium-risk indicators:
+
+- `avg_score < 80`
+- `attendance_pct < 85`
+- `balance_due > 0`
+
+Important: `risk_reasons` may be empty for medium-risk students. That does not mean there are no reasons. The model should infer medium-risk reasons from the metrics and thresholds.
+
+Example correction:
+
+```text
+Noah Patel is medium risk because his average score is below 80, attendance is below 85%, and he has a partial fee balance. He does not meet high-risk thresholds, but he should be monitored.
+```
+
+## 10. Troubleshooting
 
 ### MCP Server Does Not Appear
 

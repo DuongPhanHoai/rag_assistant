@@ -119,3 +119,7 @@ Use `student_rag.agent` for the deterministic workflow with fallback planning. U
 For detailed setup, tool behavior, and troubleshooting, see `docs/LMSTUDIO_CHAT_AGENT_GUIDE.md`.
 
 For terminal commands and validation steps, see `docs/CLI_GUIDE.md`.
+
+For Cursor Chat MCP setup, see `docs/CURSOR_CHAT_MCP_GUIDE.md`.
+
+For testing the Python API tool loop, see `docs/API_TESTING_GUIDE.md`.

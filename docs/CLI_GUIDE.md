@@ -182,6 +182,13 @@ Expected high-risk students include:
 - Carlos Reyes
 - Lina Garcia
 
+Expected medium-risk students include:
+
+- Noah Patel
+- Minh Nguyen
+
+When reviewing answers, do not treat empty `risk_reasons` as "no reason" for medium-risk students. Medium risk is inferred from metrics such as average score below `80`, attendance below `85%`, or a partial fee balance.
+
 ## 9. Common Problems
 
 ### `ModuleNotFoundError: student_rag`
