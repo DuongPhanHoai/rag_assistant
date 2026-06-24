@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "student-management-agentic-rag"
+version = "0.1.0"
+description = "Local SQLite and Chroma agentic RAG sample for Student Management data."
+requires-python = ">=3.11"
+dependencies = [
+    "langchain",
+    "langchain-community",
+    "langchain-openai",
+    "langchain-text-splitters",
+    "chromadb",
+    "python-dotenv",
+    "sentence-transformers",
+]
+
+[project.scripts]
+student-agent = "student_rag.agent:main"
+student-lmstudio-agent = "student_rag.lmstudio_agent:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

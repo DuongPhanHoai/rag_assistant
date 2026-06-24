@@ -31,8 +31,18 @@ student_management_agentic_rag/
   scripts/
     build_student_db.py
     build_student_vectors.py
-  student_agent.py
+  src/
+    student_rag/
+      __init__.py
+      agent.py
+      artifacts.py
+      db.py
+      llm.py
+      lmstudio_agent.py
+      paths.py
+      retrieval.py
   eval_student_run.py
+  pyproject.toml
   requirements.txt
   README.md
 ```
@@ -44,6 +54,7 @@ student_management_agentic_rag/
 Build the local assets:
 
 ```powershell
+pip install -r requirements.txt
 python scripts/build_student_db.py
 python scripts/build_student_vectors.py
 ```
@@ -51,7 +62,20 @@ python scripts/build_student_vectors.py
 Ask questions interactively:
 
 ```powershell
-python student_agent.py
+python -m student_rag.agent
+```
+
+Run the LM Studio tool-calling agent:
+
+```powershell
+python -m student_rag.lmstudio_agent
+```
+
+After `pip install -r requirements.txt`, you can also use the console scripts:
+
+```powershell
+student-agent
+student-lmstudio-agent
 ```
 
 Example questions:
@@ -72,3 +96,15 @@ Generated local artifacts are ignored by git:
 - `student_management.sqlite`
 - `chroma_student_db/`
 - `eval/student_results.jsonl`
+
+## LM Studio Setup
+
+Start the LM Studio local server and load a tool-capable model. For example:
+
+```env
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+LMSTUDIO_MODEL=qwen/qwen3-4b-thinking-2507
+LMSTUDIO_TIMEOUT_SECONDS=30
+```
+
+Use `student_rag.agent` for the deterministic workflow with fallback planning. Use `student_rag.lmstudio_agent` when you want LM Studio to choose and call tools directly through the OpenAI-compatible tool-calling API.

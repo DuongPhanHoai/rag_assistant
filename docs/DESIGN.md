@@ -1,58 +1,103 @@
-# DESIGN
+# Design: Student Management Agentic RAG
 
-This project is a local SQLite Agentic RAG sample over Student Management data.
+## 1. Purpose
 
-It uses LM Studio through an OpenAI-compatible local chat endpoint, local HuggingFace embeddings, Chroma for vector retrieval, and SQLite for structured data.
+This project is a small local sample that shows how an agent can answer Student Management questions by combining:
 
----
+- Structured data from SQLite.
+- Unstructured evidence from Chroma embeddings.
+- Local answer generation through LM Studio.
+- A simple workflow with planning, tool execution, table/chart output, replanning, and final synthesis.
 
-## 1. Goals
+The sample is intentionally lightweight so it can be used as a teaching project or as a base for Cursor or LM Studio agent experiments.
 
-The project is intentionally small and inspectable. It should help demonstrate:
+## 2. Scope
 
-- Repeatable eval runs over fixed question sets.
-- Grounded answering that combines structured SQL data and unstructured embedding retrieval.
-- A simple agentic workflow with planning, tool use, table/chart output, replanning, and final answer synthesis.
-- Local-first operation without hosted model or database services.
+In scope:
 
----
+- Build a local SQLite database from CSV source files.
+- Build a local Chroma vector store from Markdown documents.
+- Answer natural-language questions with SQL evidence and retrieved document snippets.
+- Produce Markdown tables or Vega-Lite chart specs when useful.
+- Run repeatable eval questions and append JSONL results.
 
-## 2. SQLite Agentic RAG Sample
+Out of scope for the first version:
 
-The Student Management sample adds a simple ELT layer and a tool-style workflow. It is designed for questions that need both structured facts and policy or advising context.
+- User authentication.
+- Multi-user database writes.
+- Hosted vector databases.
+- Production scheduling or orchestration.
+- Full BI dashboard rendering.
 
-### Target Architecture
+## 3. Target Architecture
 
 ```mermaid
 flowchart TD
-    UserQuestion["User Question"] --> Planner["Plan And Decompose"]
-    Planner --> SqlTool["Query SQLite"]
-    Planner --> VectorTool["Query Chroma Embeddings"]
+    UserQuestion["User Question"] --> RuntimeChoice["Runtime Choice"]
+    RuntimeChoice --> DeterministicAgent["student_rag.agent"]
+    RuntimeChoice --> ToolAgent["student_rag.lmstudio_agent"]
+    DeterministicAgent --> Planner["Planner: plan_question"]
+    Planner --> Decomposer["Decomposer: decompose_query_request"]
+    ToolAgent --> LmToolLoop["LM Studio Tool Loop"]
 
-    CsvData["Student CSV Data"] --> EltScript["ELT: build_student_db.py"]
-    EltScript --> SQLiteDb["student_management.sqlite"]
+    CsvData["CSV Seed Data"] --> DbBuilder["ELT Script: build_student_db.py"]
+    DbBuilder --> SQLiteDb["SQLite DB: student_management.sqlite"]
     SQLiteDb --> SqlViews["Analytical Views"]
-    SqlViews --> SqlTool
+    SqlViews --> SqlTool["SQL Tool: run_sql"]
 
-    StudentDocs["Advising Notes And Policies"] --> VectorBuild["Vector Build: build_student_vectors.py"]
-    VectorBuild --> ChromaDb["chroma_student_db"]
-    ChromaDb --> VectorTool
+    MarkdownDocs["Markdown Docs: Notes And Policies"] --> VectorBuilder["Vector Script: build_student_vectors.py"]
+    VectorBuilder --> ChromaStore["Chroma Store: chroma_student_db"]
+    ChromaStore --> VectorTool["Vector Tool: retrieve_notes"]
 
-    SqlTool --> Evidence["Structured Evidence"]
+    Decomposer --> SqlTool
+    Decomposer --> VectorTool
+    LmToolLoop --> SqlTool
+    LmToolLoop --> VectorTool
+    SqlTool --> Evidence["Evidence Bundle"]
     VectorTool --> Evidence
-    Evidence --> OutputPlanner["Table Or Chart Decision"]
-    OutputPlanner --> Replanner["Replan If Missing Evidence"]
+
+    Evidence --> ArtifactMaker["Artifact Maker: Table Or Chart"]
+    ArtifactMaker --> Replanner["Replanner: replan_if_needed"]
     Replanner --> SqlTool
     Replanner --> VectorTool
-    Replanner --> Answer["Final Answer With Sources"]
+    Replanner --> Answerer["Answerer: answer_from_evidence"]
 
     LmStudio["LM Studio Local LLM"] --> Planner
-    LmStudio --> Answer
+    LmStudio --> LmToolLoop
+    LmStudio --> Answerer
+    Answerer --> FinalAnswer["Final Answer With Sources"]
 ```
 
-### Data
+## 4. Project Structure
 
-Structured CSV sources live in `data/student_management/`:
+```text
+student_management_agentic_rag/
+  data/
+    student_management/
+      *.csv
+      docs/
+  docs/
+  eval/
+  scripts/
+  src/
+    student_rag/
+      agent.py
+      artifacts.py
+      db.py
+      llm.py
+      lmstudio_agent.py
+      paths.py
+      retrieval.py
+  eval_student_run.py
+  pyproject.toml
+  requirements.txt
+```
+
+## 5. Main Components
+
+### Source Data
+
+Structured CSV files are stored under `data/student_management/`:
 
 - `students.csv`
 - `courses.csv`
@@ -61,56 +106,163 @@ Structured CSV sources live in `data/student_management/`:
 - `assessments.csv`
 - `fees.csv`
 
-Unstructured retrieval documents live in `data/student_management/docs/`:
+Unstructured Markdown documents are stored under `data/student_management/docs/`:
 
 - `advising_notes.md`
 - `policies.md`
 - `course_descriptions.md`
 
-### ELT
+### SQLite ELT
 
-`scripts/build_student_db.py` rebuilds `student_management.sqlite` from the CSV files using Python `sqlite3`.
+`student_rag.db` contains the SQLite schema, ELT build function, schema summary, and safe read-only SQL execution. `scripts/build_student_db.py` is a thin command wrapper that rebuilds `student_management.sqlite`.
 
-Raw tables remain normalized, while views provide useful analytical surfaces:
+The raw tables stay normalized. The script also creates analytical views that make agent-generated SQL simpler:
 
-- `student_risk_summary` – Average score, attendance, fee balance, risk level, risk reasons, and scholarship flag by student.
-- `course_performance_summary` – Average score and attendance by course.
-- `attendance_trend` – Monthly attendance percentage by student.
-- `assessment_scores`, `attendance_summary`, `fee_summary` – Reusable intermediate summaries.
+- `assessment_scores`
+- `attendance_summary`
+- `fee_summary`
+- `student_risk_summary`
+- `course_performance_summary`
+- `attendance_trend`
 
 ### Vector Index
 
-`scripts/build_student_vectors.py` chunks the Markdown documents and stores embeddings in `chroma_student_db/`.
+`student_rag.retrieval` loads Markdown documents, splits them into chunks, embeds the chunks with `sentence-transformers/all-MiniLM-L6-v2`, and persists them in `chroma_student_db/`. `scripts/build_student_vectors.py` is a thin command wrapper.
 
 ### Agent Workflow
 
-`student_agent.py` exposes the workflow as readable functions:
+`student_rag.agent` contains the deterministic workflow functions:
 
-- `plan_question()` – Plans SQL, vector retrieval, and table/chart needs. It uses LM Studio when available and falls back to deterministic keyword plans.
-- `decompose_query_request()` – Converts the plan into explicit workflow steps.
-- `run_sql()` – Executes one read-only `SELECT` or `WITH` statement against SQLite.
-- `retrieve_notes()` – Runs Chroma similarity search over student notes and policies.
-- `generate_table_or_chart_spec()` – Creates a Markdown table or Vega-Lite chart spec.
-- `replan_if_needed()` – Runs a fallback query if the first SQL plan returns no rows.
-- `answer_from_evidence()` – Synthesizes the final answer with LM Studio or a deterministic fallback.
+- `plan_question()` decides whether SQL, vector retrieval, and chart output are needed.
+- `decompose_query_request()` turns the plan into explicit workflow steps.
+- `run_sql()` validates and executes one read-only SQLite query.
+- `retrieve_notes()` performs Chroma similarity search over advising and policy docs.
+- `generate_table_or_chart_spec()` returns a Markdown table or Vega-Lite chart spec.
+- `replan_if_needed()` runs a fallback query when SQL evidence is missing.
+- `answer_from_evidence()` asks LM Studio to synthesize the final answer, with a deterministic fallback when LM Studio is unavailable.
 
-The SQL tool rejects mutating statements before execution. This keeps the sample safe for a local demo while still showing how an agent can use structured data.
+`student_rag.lmstudio_agent` exposes the same project capabilities through LM Studio's OpenAI-compatible tool-calling API:
 
----
+- `get_schema_summary` gives the model the SQLite tables, views, and columns.
+- `run_sql` executes validated read-only SQL.
+- `retrieve_notes` searches advising notes, policies, and course descriptions.
+- `generate_artifact` builds a Markdown table or Vega-Lite chart spec from the latest SQL result.
+- If tool calling fails or reaches the round limit, it falls back to `answer_student_question()`.
 
-## 3. Student Eval Flow
+## 6. Runtime Flow
 
-`eval/student_questions.json` contains mixed SQL-only, vector-only, hybrid, and chart-style questions.
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent as student_rag.agent or student_rag.lmstudio_agent
+    participant SQLite as SQLite
+    participant Chroma as Chroma
+    participant LLM as LM Studio
 
-`eval_student_run.py` writes each result to `eval/student_results.jsonl` with:
+    User->>Agent: Ask natural-language question
+    Agent->>LLM: Request plan
+    LLM-->>Agent: Plan with SQL, vector, and artifact needs
+    Agent->>SQLite: Execute validated read-only SQL
+    SQLite-->>Agent: Structured rows
+    Agent->>Chroma: Retrieve relevant notes and policies
+    Chroma-->>Agent: Document chunks and sources
+    Agent->>Agent: Build table or chart artifact
+    Agent->>Agent: Replan if evidence is missing
+    Agent->>LLM: Synthesize final answer from evidence
+    LLM-->>Agent: Final response
+    Agent-->>User: Answer, sources, and artifact
+```
 
-- `run_id`
-- `id`
-- `question`
-- `answer`
-- `plan`
-- `sql`
-- `artifact_type`
-- `sources`
+## 7. Data Model Summary
 
-This makes it possible to compare prompt, model, SQL-planning, or retrieval changes across runs.
+```mermaid
+erDiagram
+    STUDENTS ||--o{ ENROLLMENTS : has
+    COURSES ||--o{ ENROLLMENTS : includes
+    STUDENTS ||--o{ ATTENDANCE : records
+    COURSES ||--o{ ATTENDANCE : tracks
+    STUDENTS ||--o{ ASSESSMENTS : earns
+    COURSES ||--o{ ASSESSMENTS : grades
+    STUDENTS ||--o{ FEES : owes
+
+    STUDENTS {
+        text student_id PK
+        text first_name
+        text last_name
+        text program
+        integer year_level
+        text advisor
+    }
+
+    COURSES {
+        text course_id PK
+        text course_name
+        text department
+        integer credits
+    }
+
+    ENROLLMENTS {
+        text enrollment_id PK
+        text student_id FK
+        text course_id FK
+        text term
+        text status
+    }
+
+    ATTENDANCE {
+        text attendance_id PK
+        text student_id FK
+        text course_id FK
+        text month
+        integer sessions_held
+        integer sessions_attended
+    }
+
+    ASSESSMENTS {
+        text assessment_id PK
+        text student_id FK
+        text course_id FK
+        real score
+        real max_score
+        real weight
+    }
+
+    FEES {
+        text fee_id PK
+        text student_id FK
+        real total_due
+        real amount_paid
+        text status
+    }
+```
+
+## 8. Safety Rules
+
+The SQL tool is intentionally conservative:
+
+- Only one statement is allowed.
+- SQL must start with `SELECT` or `WITH`.
+- Mutating keywords such as `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, and `CREATE` are rejected.
+- Results are capped by `MAX_SQL_ROWS`.
+
+This keeps the demo safe while still showing how an agent can use structured data.
+
+## 9. Evaluation
+
+`eval/student_questions.json` contains representative questions:
+
+- Student risk and intervention.
+- Course performance weak areas.
+- Scholarship support eligibility.
+- Attendance trend chart generation.
+
+`eval_student_run.py` appends each run to `eval/student_results.jsonl` with the question, answer, plan, SQL, artifact type, and sources.
+
+## 10. Generated Artifacts
+
+These files are generated locally and ignored by git:
+
+- `student_management.sqlite`
+- `chroma_student_db/`
+- `eval/student_results.jsonl`
+- `__pycache__/`

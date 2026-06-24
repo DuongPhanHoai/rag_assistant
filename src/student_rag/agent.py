@@ -1,86 +1,11 @@
-# student_agent.py
 import json
-import os
 import re
-import sqlite3
-import sys
-from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_openai import ChatOpenAI
-
-CURRENT_DIR = Path(__file__).resolve().parent
-if str(CURRENT_DIR) not in sys.path:
-    sys.path.append(str(CURRENT_DIR))
-
-from scripts.build_student_db import DB_PATH, build_database
-from scripts.build_student_vectors import EMBEDDING_MODEL, VECTOR_DB_DIR, build_student_vectorstore
-
-
-load_dotenv()
-
-LMSTUDIO_BASE_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-LMSTUDIO_MODEL = os.getenv("LMSTUDIO_MODEL", "lmstudio")
-LMSTUDIO_TIMEOUT_SECONDS = float(os.getenv("LMSTUDIO_TIMEOUT_SECONDS", "10"))
-
-MAX_SQL_ROWS = 50
-BLOCKED_SQL = re.compile(
-    r"\b(insert|update|delete|drop|alter|create|replace|truncate|attach|detach|vacuum|pragma)\b",
-    re.IGNORECASE,
-)
-
-
-def get_llm() -> ChatOpenAI:
-    return ChatOpenAI(
-        base_url=LMSTUDIO_BASE_URL,
-        api_key="not-needed",
-        model=LMSTUDIO_MODEL,
-        temperature=0,
-        timeout=LMSTUDIO_TIMEOUT_SECONDS,
-    )
-
-
-def ensure_student_assets() -> None:
-    if not Path(DB_PATH).exists():
-        build_database()
-    if not Path(VECTOR_DB_DIR).exists():
-        build_student_vectorstore()
-
-
-def get_student_vectorstore() -> Chroma:
-    ensure_student_assets()
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    return Chroma(
-        embedding_function=embeddings,
-        persist_directory=str(VECTOR_DB_DIR),
-    )
-
-
-def get_schema_summary() -> str:
-    ensure_student_assets()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        rows = conn.execute(
-            """
-            SELECT name, type
-            FROM sqlite_master
-            WHERE type IN ('table', 'view')
-              AND name NOT LIKE 'sqlite_%'
-            ORDER BY type, name
-            """
-        ).fetchall()
-
-        lines = []
-        for name, object_type in rows:
-            columns = conn.execute(f"PRAGMA table_info({name})").fetchall()
-            column_names = ", ".join(column[1] for column in columns)
-            lines.append(f"- {object_type} {name}: {column_names}")
-        return "\n".join(lines)
-    finally:
-        conn.close()
+from student_rag.artifacts import generate_table_or_chart_spec, markdown_table
+from student_rag.db import get_schema_summary, run_sql
+from student_rag.llm import get_llm
+from student_rag.retrieval import retrieve_notes
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -204,102 +129,6 @@ def decompose_query_request(plan: dict[str, Any]) -> list[dict[str, str]]:
     return steps
 
 
-def validate_read_only_sql(sql: str) -> str:
-    cleaned = sql.strip()
-    if not cleaned:
-        raise ValueError("SQL is empty")
-
-    if cleaned.endswith(";"):
-        cleaned = cleaned[:-1].strip()
-    if ";" in cleaned:
-        raise ValueError("Only one SQL statement is allowed")
-    if BLOCKED_SQL.search(cleaned):
-        raise ValueError("Only read-only SELECT/WITH SQL is allowed")
-    if not re.match(r"^(select|with)\b", cleaned, re.IGNORECASE):
-        raise ValueError("SQL must start with SELECT or WITH")
-
-    return cleaned
-
-
-def run_sql(sql: str, limit: int = MAX_SQL_ROWS) -> dict[str, Any]:
-    ensure_student_assets()
-    cleaned = validate_read_only_sql(sql)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        cursor = conn.execute(cleaned)
-        rows = cursor.fetchmany(limit + 1)
-        columns = [description[0] for description in cursor.description or []]
-        limited = len(rows) > limit
-        rows = rows[:limit]
-        return {
-            "sql": cleaned,
-            "columns": columns,
-            "rows": [dict(row) for row in rows],
-            "row_count": len(rows),
-            "limited": limited,
-        }
-    finally:
-        conn.close()
-
-
-def retrieve_notes(query: str, k: int = 4) -> list[dict[str, Any]]:
-    vectordb = get_student_vectorstore()
-    docs = vectordb.similarity_search(query, k=k)
-    return [
-        {
-            "source": doc.metadata.get("source", ""),
-            "content": doc.page_content,
-        }
-        for doc in docs
-    ]
-
-
-def _markdown_table(rows: list[dict[str, Any]], columns: list[str]) -> str:
-    if not rows:
-        return "No rows returned."
-
-    display_columns = columns[:8]
-    header = "| " + " | ".join(display_columns) + " |"
-    separator = "| " + " | ".join(["---"] * len(display_columns)) + " |"
-    body = []
-    for row in rows[:10]:
-        values = [str(row.get(column, "")) for column in display_columns]
-        body.append("| " + " | ".join(values) + " |")
-    return "\n".join([header, separator, *body])
-
-
-def generate_table_or_chart_spec(question: str, sql_result: dict[str, Any], needs_chart: bool) -> dict[str, Any]:
-    rows = sql_result.get("rows", [])
-    columns = sql_result.get("columns", [])
-    if needs_chart and rows:
-        x_field = "month" if "month" in columns else columns[0]
-        y_field = "attendance_pct" if "attendance_pct" in columns else columns[-1]
-        color_field = "student_name" if "student_name" in columns else None
-        encoding = {
-            "x": {"field": x_field, "type": "ordinal"},
-            "y": {"field": y_field, "type": "quantitative"},
-        }
-        if color_field:
-            encoding["color"] = {"field": color_field, "type": "nominal"}
-
-        return {
-            "type": "chart",
-            "chart_spec": {
-                "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-                "description": question,
-                "data": {"values": rows},
-                "mark": "line",
-                "encoding": encoding,
-            },
-        }
-
-    return {
-        "type": "table",
-        "markdown": _markdown_table(rows, columns),
-    }
-
-
 def replan_if_needed(
     question: str,
     plan: dict[str, Any],
@@ -329,7 +158,7 @@ def _fallback_answer(
     lines = [f"Question: {question}", ""]
     if sql_result and sql_result.get("rows"):
         lines.append("Structured evidence:")
-        lines.append(_markdown_table(sql_result["rows"], sql_result["columns"]))
+        lines.append(markdown_table(sql_result["rows"], sql_result["columns"]))
         lines.append("")
     if notes:
         lines.append("Retrieved notes:")
@@ -405,7 +234,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
     }
 
 
-if __name__ == "__main__":
+def main() -> None:
     print("Student Agentic RAG sample. Type 'quit' to exit.")
     while True:
         user_question = input("\nAsk a student management question: ").strip()
@@ -425,3 +254,7 @@ if __name__ == "__main__":
                 print(" -", source)
         except Exception as exc:
             print("Error:", exc)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SQLite Agentic RAG Sample</title>
+  <style>
+    body {
+      color: #1f2937;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+      margin: 40px auto;
+      max-width: 980px;
+      padding: 0 24px;
+    }
+    h1, h2 {
+      color: #111827;
+    }
+    h1 {
+      border-bottom: 2px solid #d1d5db;
+      padding-bottom: 12px;
+    }
+    .diagram {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+      padding: 16px;
+    }
+    svg {
+      display: block;
+      min-width: 860px;
+    }
+    .box {
+      fill: #f9fafb;
+      stroke: #374151;
+      stroke-width: 1.4;
+      rx: 8;
+    }
+    .label {
+      fill: #111827;
+      font-size: 14px;
+      text-anchor: middle;
+    }
+    .arrow {
+      fill: none;
+      marker-end: url(#arrowhead);
+      stroke: #374151;
+      stroke-width: 1.5;
+    }
+    code {
+      background: #f3f4f6;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>SQLite Agentic RAG Sample</h1>
+
+  <h2>Recommended Dataset</h2>
+  <p>Use <strong>Student Management</strong> because it naturally mixes structured analytics and unstructured evidence.</p>
+  <ul>
+    <li>Structured SQLite tables: <code>students</code>, <code>courses</code>, <code>enrollments</code>, <code>attendance</code>, <code>assessments</code>, <code>fees</code>, <code>advising_cases</code>.</li>
+    <li>Unstructured documents for embeddings: advising notes, course descriptions, scholarship policy, attendance policy, intervention playbooks.</li>
+    <li>Example questions:
+      <ul>
+        <li>Which students are at risk this term and why?</li>
+        <li>Show average grade by course and explain weak areas.</li>
+        <li>Who qualifies for scholarship support based on GPA, attendance, and fee status?</li>
+        <li>Create a chart of attendance trend by month for at-risk students.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <p>Alternative datasets: retail orders, clinic appointments, or HR training.</p>
+
+  <h2>Target Architecture</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 900 620" role="img" aria-label="Target Architecture diagram">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+
+      <rect class="box" x="360" y="20" width="180" height="48"></rect>
+      <text class="label" x="450" y="50">User Question</text>
+
+      <rect class="box" x="360" y="100" width="180" height="48"></rect>
+      <text class="label" x="450" y="130">Plan And Decompose</text>
+
+      <rect class="box" x="120" y="200" width="180" height="48"></rect>
+      <text class="label" x="210" y="230">Query SQLite</text>
+
+      <rect class="box" x="600" y="200" width="180" height="48"></rect>
+      <text class="label" x="690" y="230">Query Chroma Embeddings</text>
+
+      <rect class="box" x="360" y="300" width="180" height="48"></rect>
+      <text class="label" x="450" y="330">Structured Evidence</text>
+
+      <rect class="box" x="360" y="380" width="180" height="48"></rect>
+      <text class="label" x="450" y="410">Table Or Chart Decision</text>
+
+      <rect class="box" x="360" y="460" width="180" height="48"></rect>
+      <text class="label" x="450" y="490">Replan If Missing Evidence</text>
+
+      <rect class="box" x="360" y="540" width="180" height="48"></rect>
+      <text class="label" x="450" y="570">Final Answer With Sources</text>
+
+      <path class="arrow" d="M450 68 L450 100"></path>
+      <path class="arrow" d="M405 148 L255 200"></path>
+      <path class="arrow" d="M495 148 L645 200"></path>
+      <path class="arrow" d="M300 224 L360 315"></path>
+      <path class="arrow" d="M600 224 L540 315"></path>
+      <path class="arrow" d="M450 348 L450 380"></path>
+      <path class="arrow" d="M450 428 L450 460"></path>
+      <path class="arrow" d="M450 508 L450 540"></path>
+      <path class="arrow" d="M360 484 C210 450 190 310 210 248"></path>
+      <path class="arrow" d="M540 484 C690 450 710 310 690 248"></path>
+    </svg>
+  </div>
+
+  <h2>Implementation Plan</h2>
+  <ol>
+    <li>Add a small sample dataset under <code>data/student_management/</code> with CSV seed files and text or Markdown notes and policies for embedding retrieval.</li>
+    <li>Add <code>scripts/build_student_db.py</code> to create <code>student_management.sqlite</code> from the seed files using Python <code>sqlite3</code>, including useful views such as <code>student_risk_summary</code>.</li>
+    <li>Add vector ingestion for unstructured student data using HuggingFace embeddings and a separate Chroma directory such as <code>chroma_student_db/</code>.</li>
+    <li>Add <code>student_rag.agent</code> with tools for <code>plan_question</code>, <code>run_sql</code>, <code>retrieve_notes</code>, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
+    <li>Add demo questions and evaluation examples in <code>eval/student_questions.json</code>.</li>
+    <li>Update docs with setup, workflow diagram, dataset description, and example prompts.</li>
+  </ol>
+
+  <h2>Scope Boundary</h2>
+  <p>Keep the first version local and lightweight: SQLite from the standard library, Chroma for embeddings, LM Studio through the existing OpenAI-compatible config, and chart output as a simple Vega-Lite JSON spec or saved PNG only if visualization is needed in the demo.</p>
+</body>
+</html>
