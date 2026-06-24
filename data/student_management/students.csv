@@ -1,0 +1,9 @@
+student_id,first_name,last_name,program,year_level,advisor,email
+S001,Maya,Tran,Data Analytics,2,Dr. Rivera,maya.tran@example.edu
+S002,Noah,Patel,Software Engineering,3,Prof. Chen,noah.patel@example.edu
+S003,Lina,Garcia,Business Analytics,1,Dr. Rivera,lina.garcia@example.edu
+S004,Owen,Smith,Software Engineering,2,Prof. Malik,owen.smith@example.edu
+S005,Aisha,Khan,Information Systems,4,Prof. Chen,aisha.khan@example.edu
+S006,Minh,Nguyen,Data Analytics,3,Dr. Santos,minh.nguyen@example.edu
+S007,Emma,Brown,Business Analytics,2,Dr. Santos,emma.brown@example.edu
+S008,Carlos,Reyes,Information Systems,1,Prof. Malik,carlos.reyes@example.edu

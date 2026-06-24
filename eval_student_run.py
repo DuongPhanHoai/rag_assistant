@@ -1,26 +1,26 @@
-# eval_run.py
+# eval_student_run.py
+import json
 import os
 import sys
-import json
-from datetime import datetime
+from datetime import UTC, datetime
 
-# Ensure current directory is on sys.path so we can import rag_assistant
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.append(CURRENT_DIR)
 
-from rag_assistant import answer_question  # noqa: E402
+from student_agent import answer_student_question  # noqa: E402
 
-EVAL_QUESTIONS_PATH = os.path.join("eval", "questions.json")
-EVAL_RESULTS_PATH = os.path.join("eval", "results.jsonl")
+
+EVAL_QUESTIONS_PATH = os.path.join("eval", "student_questions.json")
+EVAL_RESULTS_PATH = os.path.join("eval", "student_results.jsonl")
 
 
 def run_eval():
     with open(EVAL_QUESTIONS_PATH, "r", encoding="utf-8") as f:
         questions = json.load(f)
 
-    run_id = datetime.utcnow().isoformat()
-
+    run_id = datetime.now(UTC).isoformat()
     os.makedirs(os.path.dirname(EVAL_RESULTS_PATH), exist_ok=True)
 
     with open(EVAL_RESULTS_PATH, "a", encoding="utf-8") as f_out:
@@ -29,18 +29,21 @@ def run_eval():
             question = item["question"]
 
             print(f"Running: {qid} - {question}")
-            res = answer_question(question)
+            res = answer_student_question(question)
 
             record = {
                 "run_id": run_id,
                 "id": qid,
                 "question": question,
                 "answer": res["answer"],
+                "plan": res["plan"],
+                "sql": (res["sql_result"] or {}).get("sql"),
+                "artifact_type": res["artifact"]["type"],
                 "sources": res["sources"],
             }
             f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    print(f"\nEval run completed. Results saved to {EVAL_RESULTS_PATH}")
+    print(f"\nStudent eval run completed. Results saved to {EVAL_RESULTS_PATH}")
 
 
 if __name__ == "__main__":

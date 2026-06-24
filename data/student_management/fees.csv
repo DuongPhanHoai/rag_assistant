@@ -1,0 +1,9 @@
+fee_id,student_id,term,total_due,amount_paid,due_date,status
+F001,S001,2026-Spring,1200,1200,2026-02-15,paid
+F002,S002,2026-Spring,1400,1000,2026-02-15,partial
+F003,S003,2026-Spring,1100,700,2026-02-15,partial
+F004,S004,2026-Spring,1400,300,2026-02-15,overdue
+F005,S005,2026-Spring,1300,1300,2026-02-15,paid
+F006,S006,2026-Spring,1200,900,2026-02-15,partial
+F007,S007,2026-Spring,1100,1100,2026-02-15,paid
+F008,S008,2026-Spring,1300,400,2026-02-15,overdue

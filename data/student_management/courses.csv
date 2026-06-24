@@ -1,0 +1,6 @@
+course_id,course_name,department,credits,instructor
+C101,Database Fundamentals,Information Systems,3,Prof. Chen
+C102,Python for Analytics,Data Analytics,3,Dr. Santos
+C103,Statistics for Business,Business Analytics,4,Dr. Rivera
+C104,Software Project Studio,Software Engineering,4,Prof. Malik
+C105,Responsible AI Foundations,Data Analytics,2,Dr. Rivera

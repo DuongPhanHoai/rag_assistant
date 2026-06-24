@@ -1,232 +1,116 @@
 # DESIGN
 
-This document describes the design of the **CV RAG Assistant**:
+This project is a local SQLite Agentic RAG sample over Student Management data.
 
-- What problem it solves
-- Architecture and main components
-- Data flow and control flow
-- How LangChain is used (RAG pipeline and eval)
-- Planned extensions
+It uses LM Studio through an OpenAI-compatible local chat endpoint, local HuggingFace embeddings, Chroma for vector retrieval, and SQLite for structured data.
 
 ---
 
-## 1. Problem & Goals
+## 1. Goals
 
-**Problem:**  
-Given a set of personal documents (CV, job descriptions), we want a small local LLM application that can:
+The project is intentionally small and inspectable. It should help demonstrate:
 
-- Answer questions about **fit for specific roles** (AI PM, AI Engineer/SDET, etc.)
-- Use **RAG (Retrieval-Augmented Generation)** so answers are grounded in the documents.
-- Provide a simple **evaluation pipeline** to inspect answer quality over a fixed question set.
-
-**Constraints / Choices:**
-
-- Use **local LLMs** via **LM Studio** (OpenAI-compatible HTTP API).
-- Use **LangChain** for RAG composition.
-- Use **local embeddings** (HuggingFace) + **Chroma** as vector store.
-- Keep the design simple and extensible (future agents, better evals).
+- Repeatable eval runs over fixed question sets.
+- Grounded answering that combines structured SQL data and unstructured embedding retrieval.
+- A simple agentic workflow with planning, tool use, table/chart output, replanning, and final answer synthesis.
+- Local-first operation without hosted model or database services.
 
 ---
 
-## 2. High-Level Architecture
+## 2. SQLite Agentic RAG Sample
 
-Main pieces:
+The Student Management sample adds a simple ELT layer and a tool-style workflow. It is designed for questions that need both structured facts and policy or advising context.
 
-- `data/` – Source documents (CV + JDs) in plain text.
-- `rag_assistant.py` – Core RAG pipeline:
-    - Document loading & chunking
-    - Embedding + vector store
-    - Retrieval + LLM answering
-- `eval_run.py` – Simple evaluation runner:
-    - Loads a small set of questions
-    - Runs them through the RAG assistant
-    - Stores outputs to JSONL for manual / later model-graded evals
-- `LM Studio` – Local LLM server providing an **OpenAI-compatible** chat endpoint.
+### Target Architecture
 
----
+```mermaid
+flowchart TD
+    UserQuestion["User Question"] --> Planner["Plan And Decompose"]
+    Planner --> SqlTool["Query SQLite"]
+    Planner --> VectorTool["Query Chroma Embeddings"]
 
-## 3. Components
+    CsvData["Student CSV Data"] --> EltScript["ELT: build_student_db.py"]
+    EltScript --> SQLiteDb["student_management.sqlite"]
+    SQLiteDb --> SqlViews["Analytical Views"]
+    SqlViews --> SqlTool
 
-### 3.1 Documents & Data
+    StudentDocs["Advising Notes And Policies"] --> VectorBuild["Vector Build: build_student_vectors.py"]
+    VectorBuild --> ChromaDb["chroma_student_db"]
+    ChromaDb --> VectorTool
 
-- **Input documents**:
-    - `data/cv.txt`
-    - `data/jd_ai_pm.txt`
-    - `data/jd_ai_engineer.txt`
-    - (any other `.txt` files added to `data/`)
+    SqlTool --> Evidence["Structured Evidence"]
+    VectorTool --> Evidence
+    Evidence --> OutputPlanner["Table Or Chart Decision"]
+    OutputPlanner --> Replanner["Replan If Missing Evidence"]
+    Replanner --> SqlTool
+    Replanner --> VectorTool
+    Replanner --> Answer["Final Answer With Sources"]
 
-- **Eval questions**:
-    - `eval/questions.json` – list of objects with:
-        - `id`: short identifier
-        - `question`: natural language question
-        - optional `notes`: guidance for human review
+    LmStudio["LM Studio Local LLM"] --> Planner
+    LmStudio --> Answer
+```
 
-- **Eval results**:
-    - `eval/results.jsonl` – each line is a JSON record with:
-        - `run_id` (timestamp)
-        - `id` (question id)
-        - `question`
-        - `answer`
-        - `sources` (files used as context)
+### Data
 
----
+Structured CSV sources live in `data/student_management/`:
 
-### 3.2 RAG Assistant (`rag_assistant.py`)
+- `students.csv`
+- `courses.csv`
+- `enrollments.csv`
+- `attendance.csv`
+- `assessments.csv`
+- `fees.csv`
 
-Key functions:
+Unstructured retrieval documents live in `data/student_management/docs/`:
 
-- `load_documents()`
-    - Scans `data/` for `.txt` files.
-    - Loads them as LangChain `Document` objects with `source` metadata (file path).
+- `advising_notes.md`
+- `policies.md`
+- `course_descriptions.md`
 
-- `build_vectorstore(docs)`
-    - Splits documents into overlapping chunks using  
-      `RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=200)`.
-    - Uses `HuggingFaceEmbeddings` (`sentence-transformers/all-MiniLM-L6-v2`) to embed chunks.
-    - Stores them in a local **Chroma** DB with persistent directory `chroma_db`.
+### ELT
 
-- `get_vectorstore()`
-    - If `chroma_db` exists, reopens it with the same embedding function.
-    - Otherwise, calls `load_documents()` and `build_vectorstore(docs)`.
+`scripts/build_student_db.py` rebuilds `student_management.sqlite` from the CSV files using Python `sqlite3`.
 
-- `get_rag_chain()`
-    - Creates a **retriever** from the vector store (`k=4` top matches).
-    - Creates a **Chat LLM** using `ChatOpenAI` pointing to LM Studio:
-        - `base_url` from `LMSTUDIO_BASE_URL` (e.g. `http://localhost:1234/v1`)
-        - `model` from `LMSTUDIO_MODEL` (e.g. `google/gemma-4-e4b`)
-        - `api_key` = dummy string (`"not-needed"`)
-    - Builds a **prompt** with explicit context + question slots.
-    - Composes an LCEL pipeline (LangChain Expression Language):
+Raw tables remain normalized, while views provide useful analytical surfaces:
 
-      ```text
-      {"context": retriever(question), "question": question}
-        → prompt
-        → llm
-        → StrOutputParser (string answer)
-      ```
+- `student_risk_summary` – Average score, attendance, fee balance, risk level, risk reasons, and scholarship flag by student.
+- `course_performance_summary` – Average score and attendance by course.
+- `attendance_trend` – Monthly attendance percentage by student.
+- `assessment_scores`, `attendance_summary`, `fee_summary` – Reusable intermediate summaries.
 
-- `answer_question(question: str) -> dict`
-    - Ensures vector store exists (`get_vectorstore()`).
-    - Invokes `get_rag_chain()` to get the answer.
-    - Uses `vectordb.similarity_search(question, k=4)` to fetch top chunks and extract **source file paths**.
-    - Returns:
+### Vector Index
 
-      ```python
-      {
-        "question": question,
-        "answer": <string>,
-        "sources": [list of file paths]
-      }
-      ```
+`scripts/build_student_vectors.py` chunks the Markdown documents and stores embeddings in `chroma_student_db/`.
 
-- `__main__` block
-    - Simple CLI loop:
-        - Reads user question.
-        - Calls `answer_question`.
-        - Prints answer + sources.
+### Agent Workflow
+
+`student_agent.py` exposes the workflow as readable functions:
+
+- `plan_question()` – Plans SQL, vector retrieval, and table/chart needs. It uses LM Studio when available and falls back to deterministic keyword plans.
+- `decompose_query_request()` – Converts the plan into explicit workflow steps.
+- `run_sql()` – Executes one read-only `SELECT` or `WITH` statement against SQLite.
+- `retrieve_notes()` – Runs Chroma similarity search over student notes and policies.
+- `generate_table_or_chart_spec()` – Creates a Markdown table or Vega-Lite chart spec.
+- `replan_if_needed()` – Runs a fallback query if the first SQL plan returns no rows.
+- `answer_from_evidence()` – Synthesizes the final answer with LM Studio or a deterministic fallback.
+
+The SQL tool rejects mutating statements before execution. This keeps the sample safe for a local demo while still showing how an agent can use structured data.
 
 ---
 
-### 3.3 Evaluation Runner (`eval_run.py`)
+## 3. Student Eval Flow
 
-- Ensures the current directory is on `sys.path`, then imports `answer_question` from `rag_assistant`.
-- Loads questions from `eval/questions.json`.
-- Generates a `run_id` (UTC timestamp).
-- For each question:
-    - Calls `answer_question(question)`.
-    - Writes one JSON record per line into `eval/results.jsonl`:
+`eval/student_questions.json` contains mixed SQL-only, vector-only, hybrid, and chart-style questions.
 
-      ```json
-      {
-        "run_id": "...",
-        "id": "fit_ai_pm",
-        "question": "Why am I a good fit for an AI & Automation Project Manager role?",
-        "answer": "...",
-        "sources": ["data/cv.txt", "data/jd_ai_pm.txt"]
-      }
-      ```
+`eval_student_run.py` writes each result to `eval/student_results.jsonl` with:
 
-This provides a **dataset** of Q&A pairs grounded in the current CV + JDs, which can be:
+- `run_id`
+- `id`
+- `question`
+- `answer`
+- `plan`
+- `sql`
+- `artifact_type`
+- `sources`
 
-- Manually reviewed and scored.
-- Later fed into a **model-graded eval** pipeline.
-
----
-
-## 4. LangChain Application Flow
-
-### 4.1 RAG Answering Flow
-
-Text flow:
-
-```text
-+-----------------------+
-|  User question (CLI)  |
-+-----------+-----------+
-            |
-            v
-+----------------------+      +-------------------------+
-|  answer_question(q)  |----->|  get_vectorstore()      |
-+-----------+----------+      +-------------------------+
-            |
-            v
-+---------------------------+
-|  get_rag_chain()         |
-|  - retriever (Chroma)    |
-|  - Chat LLM (LM Studio)  |
-|  - prompt template       |
-+-----------+---------------+
-            |
-            v
-   LangChain RAG Chain (LCEL):
-   ---------------------------------------------
-   {"context": retriever(q), "question": q}
-         → ChatPromptTemplate
-         → ChatOpenAI (LM Studio)
-         → StrOutputParser
-   ---------------------------------------------
-            |
-            v
-+---------------------------+
-|   Answer (string)         |
-+---------------------------+
-            |
-            v
-+---------------------------+
-| similarity_search(q, k=4) |
-|  (for source documents)   |
-+---------------------------+
-            |
-            v
-+---------------------------+
-| return {question, answer, |
-|         sources[]}        |
-+---------------------------+
-4.2 Eval Flow
-text
-
-Collapse
-
-
- Copy
-
-python eval_run.py
-       |
-       v
-+---------------------------+
-|  Load eval/questions.json |
-+---------------------------+
-       |
-       v
-  For each question:
-       |
-       v
-+---------------------------+
-|  answer_question(q)       |
-+---------------------------+
-       |
-       v
-+---------------------------+
-|  Append record to         |
-|  eval/results.jsonl       |
-+---------------------------+
+This makes it possible to compare prompt, model, SQL-planning, or retrieval changes across runs.

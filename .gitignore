@@ -1,3 +1,8 @@
+__pycache__/
 /.idea/
-/chroma_db/
-/eval/results.jsonl
+/chroma_student_db/
+/eval/student_results.jsonl
+/student_management.sqlite
+/.cursor/
+*.pyc
+.pytest_cache/

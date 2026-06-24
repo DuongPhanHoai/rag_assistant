@@ -1,6 +1,7 @@
 langchain
 langchain-community
 langchain-openai
+langchain-text-splitters
 chromadb
-tiktoken
 python-dotenv
+sentence-transformers
