@@ -39,6 +39,7 @@ student_management_agentic_rag/
       db.py
       llm.py
       lmstudio_agent.py
+      mcp_server.py
       paths.py
       retrieval.py
   eval_student_run.py
@@ -78,6 +79,12 @@ student-agent
 student-lmstudio-agent
 ```
 
+To chat directly inside LM Studio, configure LM Studio MCP to run:
+
+```powershell
+student-mcp-server
+```
+
 Example questions:
 
 - `Which students are at risk this term and why?`
@@ -108,3 +115,7 @@ LMSTUDIO_TIMEOUT_SECONDS=30
 ```
 
 Use `student_rag.agent` for the deterministic workflow with fallback planning. Use `student_rag.lmstudio_agent` when you want LM Studio to choose and call tools directly through the OpenAI-compatible tool-calling API.
+
+For detailed setup, tool behavior, and troubleshooting, see `docs/LMSTUDIO_CHAT_AGENT_GUIDE.md`.
+
+For terminal commands and validation steps, see `docs/CLI_GUIDE.md`.

@@ -36,9 +36,11 @@ flowchart TD
     UserQuestion["User Question"] --> RuntimeChoice["Runtime Choice"]
     RuntimeChoice --> DeterministicAgent["student_rag.agent"]
     RuntimeChoice --> ToolAgent["student_rag.lmstudio_agent"]
+    RuntimeChoice --> McpServer["student_rag.mcp_server"]
     DeterministicAgent --> Planner["Planner: plan_question"]
     Planner --> Decomposer["Decomposer: decompose_query_request"]
     ToolAgent --> LmToolLoop["LM Studio Tool Loop"]
+    McpServer --> LmStudioChat["LM Studio Chat MCP Host"]
 
     CsvData["CSV Seed Data"] --> DbBuilder["ELT Script: build_student_db.py"]
     DbBuilder --> SQLiteDb["SQLite DB: student_management.sqlite"]
@@ -53,6 +55,8 @@ flowchart TD
     Decomposer --> VectorTool
     LmToolLoop --> SqlTool
     LmToolLoop --> VectorTool
+    LmStudioChat --> SqlTool
+    LmStudioChat --> VectorTool
     SqlTool --> Evidence["Evidence Bundle"]
     VectorTool --> Evidence
 
@@ -86,6 +90,7 @@ student_management_agentic_rag/
       db.py
       llm.py
       lmstudio_agent.py
+      mcp_server.py
       paths.py
       retrieval.py
   eval_student_run.py
@@ -148,6 +153,13 @@ The raw tables stay normalized. The script also creates analytical views that ma
 - `retrieve_notes` searches advising notes, policies, and course descriptions.
 - `generate_artifact` builds a Markdown table or Vega-Lite chart spec from the latest SQL result.
 - If tool calling fails or reaches the round limit, it falls back to `answer_student_question()`.
+
+`student_rag.mcp_server` exposes the same low-level tools as an MCP server so users can ask questions directly inside LM Studio Chat:
+
+- `get_schema_summary`
+- `run_sql`
+- `retrieve_notes`
+- `generate_artifact`
 
 ## 6. Runtime Flow
 

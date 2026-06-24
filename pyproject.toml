@@ -13,6 +13,7 @@ dependencies = [
     "langchain-openai",
     "langchain-text-splitters",
     "chromadb",
+    "mcp",
     "python-dotenv",
     "sentence-transformers",
 ]
@@ -20,6 +21,7 @@ dependencies = [
 [project.scripts]
 student-agent = "student_rag.agent:main"
 student-lmstudio-agent = "student_rag.lmstudio_agent:main"
+student-mcp-server = "student_rag.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

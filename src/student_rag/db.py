@@ -290,8 +290,21 @@ def get_schema_summary() -> str:
         lines = []
         for name, object_type in rows:
             columns = conn.execute(f"PRAGMA table_info({name})").fetchall()
-            column_names = ", ".join(column[1] for column in columns)
+            column_names = ", ".join(
+                f"{column[1]} {column[2]}".strip()
+                for column in columns
+            )
             lines.append(f"- {object_type} {name}: {column_names}")
+        lines.extend(
+            [
+                "",
+                "Important value hints:",
+                "- student_risk_summary.risk_level uses text values: 'high', 'medium', 'low'.",
+                "- student_risk_summary.scholarship_candidate uses integer values: 1 means yes, 0 means no.",
+                "- student_risk_summary.term uses values such as '2026-Spring'; there is no 'current_term' value.",
+                "- fee_summary.status uses text values: 'paid', 'partial', 'overdue'.",
+            ]
+        )
         return "\n".join(lines)
     finally:
         conn.close()
@@ -317,6 +330,11 @@ def validate_read_only_sql(sql: str) -> str:
 def run_sql(sql: str, limit: int = MAX_SQL_ROWS) -> dict[str, Any]:
     ensure_database()
     cleaned = validate_read_only_sql(sql)
+    warnings = []
+    if re.search(r"scholarship_candidate\s*=\s*['\"]yes['\"]", cleaned, re.IGNORECASE):
+        warnings.append("scholarship_candidate is an integer flag. Use scholarship_candidate = 1 for yes.")
+    if re.search(r"scholarship_candidate\s*=\s*['\"]no['\"]", cleaned, re.IGNORECASE):
+        warnings.append("scholarship_candidate is an integer flag. Use scholarship_candidate = 0 for no.")
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
@@ -331,6 +349,7 @@ def run_sql(sql: str, limit: int = MAX_SQL_ROWS) -> dict[str, Any]:
             "rows": [dict(row) for row in rows],
             "row_count": len(rows),
             "limited": limited,
+            "warnings": warnings,
         }
     finally:
         conn.close()
