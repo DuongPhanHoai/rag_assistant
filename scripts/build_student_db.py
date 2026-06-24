@@ -8,7 +8,7 @@ SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.append(str(SRC_DIR))
 
-from student_rag.db import build_database  # noqa: E402
+from student_rag.data.db import build_database  # noqa: E402
 from student_rag.paths import ROOT_DIR  # noqa: E402
 
 

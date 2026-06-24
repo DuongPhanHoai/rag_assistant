@@ -34,9 +34,9 @@ Out of scope for the first version:
 ```mermaid
 flowchart TD
     UserQuestion["User Question"] --> RuntimeChoice["Runtime Choice"]
-    RuntimeChoice --> DeterministicAgent["student_rag.agent"]
-    RuntimeChoice --> ToolAgent["student_rag.lmstudio_agent"]
-    RuntimeChoice --> McpServer["student_rag.mcp_server"]
+    RuntimeChoice --> DeterministicAgent["student_rag.agents.deterministic"]
+    RuntimeChoice --> ToolAgent["student_rag.agents.lmstudio"]
+    RuntimeChoice --> McpServer["student_rag.mcp.server"]
     DeterministicAgent --> Planner["Planner: plan_question"]
     Planner --> Decomposer["Decomposer: decompose_query_request"]
     ToolAgent --> LmToolLoop["LM Studio Tool Loop"]
@@ -88,14 +88,18 @@ student_management_agentic_rag/
   scripts/
   src/
     student_rag/
-      agent.py
-      artifacts.py
-      db.py
-      llm.py
-      lmstudio_agent.py
-      mcp_server.py
       paths.py
-      retrieval.py
+      artifacts.py
+      llm.py
+      data/
+        db.py
+        retrieval.py
+      agents/
+        deterministic.py
+        lmstudio.py
+      mcp/
+        server.py
+        http_server.py
   eval_student_run.py
   pyproject.toml
   requirements.txt
@@ -122,7 +126,7 @@ Unstructured Markdown documents are stored under `data/student_management/docs/`
 
 ### SQLite ELT
 
-`student_rag.db` contains the SQLite schema, ELT build function, schema summary, and safe read-only SQL execution. `scripts/build_student_db.py` is a thin command wrapper that rebuilds `student_management.sqlite`.
+`student_rag.data.db` contains the SQLite schema, ELT build function, schema summary, and safe read-only SQL execution. `scripts/build_student_db.py` is a thin command wrapper that rebuilds `student_management.sqlite`.
 
 The raw tables stay normalized. The script also creates analytical views that make agent-generated SQL simpler:
 
@@ -142,11 +146,11 @@ The raw tables stay normalized. The script also creates analytical views that ma
 
 ### Vector Index
 
-`student_rag.retrieval` loads Markdown documents, splits them into chunks, embeds the chunks with `sentence-transformers/all-MiniLM-L6-v2`, and persists them in `chroma_student_db/`. `scripts/build_student_vectors.py` is a thin command wrapper.
+`student_rag.data.retrieval` loads Markdown documents, splits them into chunks, embeds the chunks with `sentence-transformers/all-MiniLM-L6-v2`, and persists them in `chroma_student_db/`. `scripts/build_student_vectors.py` is a thin command wrapper.
 
 ### Agent Workflow
 
-`student_rag.agent` contains the deterministic workflow functions:
+`student_rag.agents.deterministic` contains the deterministic workflow functions:
 
 - `plan_question()` decides whether SQL, vector retrieval, and chart output are needed.
 - `decompose_query_request()` turns the plan into explicit workflow steps.
@@ -156,7 +160,7 @@ The raw tables stay normalized. The script also creates analytical views that ma
 - `replan_if_needed()` runs a fallback query when SQL evidence is missing.
 - `answer_from_evidence()` asks LM Studio to synthesize the final answer, with a deterministic fallback when LM Studio is unavailable.
 
-`student_rag.lmstudio_agent` exposes the same project capabilities through LM Studio's OpenAI-compatible tool-calling API:
+`student_rag.agents.lmstudio` exposes the same project capabilities through LM Studio's OpenAI-compatible tool-calling API:
 
 - `get_schema_summary` gives the model the SQLite tables, views, and columns.
 - `run_sql` executes validated read-only SQL.
@@ -164,7 +168,7 @@ The raw tables stay normalized. The script also creates analytical views that ma
 - `generate_artifact` builds a Markdown table or Vega-Lite chart spec from the latest SQL result.
 - If tool calling fails or reaches the round limit, it falls back to `answer_student_question()`.
 
-`student_rag.mcp_server` exposes the same low-level tools as an MCP server so users can ask questions directly inside LM Studio Chat:
+`student_rag.mcp.server` exposes the same low-level tools as an MCP server so users can ask questions directly inside LM Studio Chat:
 
 - `ask_student_management`
 - `get_schema_summary`
@@ -187,7 +191,7 @@ The `analyze_*` MCP tools combine structured SQL results with retrieved vector c
 ```mermaid
 sequenceDiagram
     participant User
-    participant Agent as student_rag.agent or student_rag.lmstudio_agent
+    participant Agent as student_rag.agents.deterministic or student_rag.agents.lmstudio
     participant SQLite as SQLite
     participant Chroma as Chroma
     participant LLM as LM Studio

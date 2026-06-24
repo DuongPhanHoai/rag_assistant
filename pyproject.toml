@@ -19,9 +19,10 @@ dependencies = [
 ]
 
 [project.scripts]
-student-agent = "student_rag.agent:main"
-student-lmstudio-agent = "student_rag.lmstudio_agent:main"
-student-mcp-server = "student_rag.mcp_server:main"
+student-agent = "student_rag.agents.deterministic:main"
+student-lmstudio-agent = "student_rag.agents.lmstudio:main"
+student-mcp-server = "student_rag.mcp.server:main"
+student-mcp-http-server = "student_rag.mcp.http_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

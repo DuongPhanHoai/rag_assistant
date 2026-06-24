@@ -90,15 +90,15 @@
       <text class="label" x="490" y="130">Runtime Choice</text>
 
       <rect class="box" x="80" y="200" width="190" height="54"></rect>
-      <text class="label" x="175" y="225">student_rag.agent</text>
+      <text class="label" x="175" y="225">student_rag.agents.deterministic</text>
       <text class="label" x="175" y="242">Deterministic CLI</text>
 
       <rect class="box" x="395" y="200" width="190" height="54"></rect>
-      <text class="label" x="490" y="225">student_rag.lmstudio_agent</text>
+      <text class="label" x="490" y="225">student_rag.agents.lmstudio</text>
       <text class="label" x="490" y="242">Python API Tool Loop</text>
 
       <rect class="box" x="710" y="200" width="190" height="54"></rect>
-      <text class="label" x="805" y="225">student_rag.mcp_server</text>
+      <text class="label" x="805" y="225">student_rag.mcp.server</text>
       <text class="label" x="805" y="242">LM Studio Chat MCP</text>
 
       <rect class="box" x="80" y="330" width="190" height="54"></rect>
@@ -153,8 +153,8 @@
     <li>Add <code>scripts/build_student_db.py</code> to create <code>student_management.sqlite</code> from the seed files using Python <code>sqlite3</code>, including useful views such as <code>student_risk_summary</code>.</li>
     <li>Add vector ingestion for unstructured student data using HuggingFace embeddings and a separate Chroma directory such as <code>chroma_student_db/</code>.</li>
     <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, retrieval, artifacts, LM Studio configuration, and paths.</li>
-    <li>Add <code>student_rag.agent</code> with tools for <code>plan_question</code>, <code>run_sql</code>, <code>retrieve_notes</code>, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
-    <li>Add <code>student_rag.mcp_server</code> so LM Studio Chat can call local Student Management tools through MCP.</li>
+    <li>Add <code>student_rag.agents.deterministic</code> with tools for <code>plan_question</code>, <code>run_sql</code>, <code>retrieve_notes</code>, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
+    <li>Add <code>student_rag.mcp.server</code> so LM Studio Chat can call local Student Management tools through MCP.</li>
     <li>Add demo questions and evaluation examples in <code>eval/student_questions.json</code>.</li>
     <li>Update docs with setup, workflow diagram, dataset description, and example prompts.</li>
   </ol>

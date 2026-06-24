@@ -3,11 +3,11 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
-from student_rag.agent import answer_student_question
+from student_rag.agents.deterministic import answer_student_question
 from student_rag.artifacts import generate_table_or_chart_spec
-from student_rag.db import get_schema_summary, run_sql
+from student_rag.data.db import get_schema_summary, run_sql
 from student_rag.llm import get_llm
-from student_rag.retrieval import retrieve_notes
+from student_rag.data.retrieval import retrieve_notes
 
 
 MAX_AGENT_ROUNDS = 6

@@ -3,9 +3,9 @@ import re
 from typing import Any
 
 from student_rag.artifacts import generate_table_or_chart_spec, markdown_table
-from student_rag.db import get_schema_summary, run_sql
+from student_rag.data.db import get_schema_summary, run_sql
 from student_rag.llm import get_llm
-from student_rag.retrieval import retrieve_notes
+from student_rag.data.retrieval import retrieve_notes
 
 
 def _extract_json(text: str) -> dict[str, Any]:

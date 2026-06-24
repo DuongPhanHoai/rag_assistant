@@ -67,7 +67,7 @@ Both are ignored by git.
 Use this when you want the most reliable local demo path. It uses deterministic fallback planning if LM Studio is slow or unavailable.
 
 ```powershell
-python -m student_rag.agent
+python -m student_rag.agents.deterministic
 ```
 
 Or use the installed console script:
@@ -87,7 +87,7 @@ Which students are at risk this term and why?
 Use this when you want Python to call LM Studio and let the model choose tools through the OpenAI-compatible tool-calling API.
 
 ```powershell
-python -m student_rag.lmstudio_agent
+python -m student_rag.agents.lmstudio
 ```
 
 Or:
@@ -134,7 +134,7 @@ If LM Studio cannot find the command, use Python directly:
   "mcpServers": {
     "student-management-rag": {
       "command": "python",
-      "args": ["-m", "student_rag.mcp_server"]
+      "args": ["-m", "student_rag.mcp.server"]
     }
   }
 }
@@ -167,13 +167,13 @@ This file is ignored by git.
 Check Python compilation:
 
 ```powershell
-python -m py_compile src/student_rag/*.py eval_student_run.py scripts/build_student_db.py scripts/build_student_vectors.py
+python -m py_compile src/student_rag/*.py src/student_rag/data/*.py src/student_rag/agents/*.py src/student_rag/mcp/*.py eval_student_run.py scripts/build_student_db.py scripts/build_student_vectors.py
 ```
 
 Check the risk summary directly:
 
 ```powershell
-python -c "import sys,json; sys.path.insert(0, r'D:\rag_assistant\src'); from student_rag.db import run_sql; print(json.dumps(run_sql('SELECT student_name, avg_score, attendance_pct, balance_due, risk_level, risk_reasons FROM student_risk_summary ORDER BY avg_score'), indent=2))"
+python -c "import sys,json; sys.path.insert(0, r'D:\rag_assistant\src'); from student_rag.data.db import run_sql; print(json.dumps(run_sql('SELECT student_name, avg_score, attendance_pct, balance_due, risk_level, risk_reasons FROM student_risk_summary ORDER BY avg_score'), indent=2))"
 ```
 
 Expected high-risk students include:
@@ -240,5 +240,5 @@ Using the student-management-rag tools, inspect the schema, query student_risk_s
 For reliable terminal output, prefer:
 
 ```powershell
-python -m student_rag.agent
+python -m student_rag.agents.deterministic
 ```

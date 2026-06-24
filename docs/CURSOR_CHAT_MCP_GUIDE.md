@@ -5,8 +5,10 @@ This guide explains how to ask Student Management questions directly from Cursor
 Cursor can call local tools through MCP. This project exposes the Student Management RAG tools through:
 
 ```text
-student_rag.mcp_server
+student_rag.mcp.server
 ```
+
+If Cursor runs on a different machine from the project/data, see `docs/REMOTE_MCP_SERVER_GUIDE.md`.
 
 ## 1. Build Local Assets
 
@@ -149,7 +151,7 @@ pip install -r requirements.txt
 
 ### Package Import Error
 
-Use the launcher script, not `python -m student_rag.mcp_server`, because the launcher inserts `src/` into `sys.path`.
+Use the launcher script, not `python -m student_rag.mcp.server`, because the launcher inserts `src/` into `sys.path`.
 
 ### Empty Or Wrong SQL Result
 

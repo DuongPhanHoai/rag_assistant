@@ -10,7 +10,7 @@ SRC_DIR = os.path.join(CURRENT_DIR, "src")
 if SRC_DIR not in sys.path:
     sys.path.append(SRC_DIR)
 
-from student_rag.agent import answer_student_question  # noqa: E402
+from student_rag.agents.deterministic import answer_student_question  # noqa: E402
 
 
 EVAL_QUESTIONS_PATH = os.path.join("eval", "student_questions.json")

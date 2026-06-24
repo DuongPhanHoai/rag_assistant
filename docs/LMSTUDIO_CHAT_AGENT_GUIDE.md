@@ -2,12 +2,14 @@
 
 This guide explains how to ask Student Management questions directly inside the LM Studio Chat UI.
 
+If LM Studio runs on a different machine from the project/data, see `docs/REMOTE_MCP_SERVER_GUIDE.md`.
+
 ## 1. Integration Modes
 
 There are two possible integrations:
 
 - **LM Studio Chat UI with MCP**: you chat inside LM Studio, and LM Studio calls this project as a local MCP tool server.
-- **Python API agent**: you run `python -m student_rag.lmstudio_agent`, and that Python process calls LM Studio's OpenAI-compatible API.
+- **Python API agent**: you run `python -m student_rag.agents.lmstudio`, and that Python process calls LM Studio's OpenAI-compatible API.
 
 If your goal is to type questions in LM Studio Chat, use **LM Studio Chat UI with MCP**.
 
@@ -84,7 +86,7 @@ If LM Studio cannot find `student-mcp-server` on Windows, use Python directly:
   "mcpServers": {
     "student-management-rag": {
       "command": "python",
-      "args": ["-m", "student_rag.mcp_server"]
+      "args": ["-m", "student_rag.mcp.server"]
     }
   }
 }
@@ -112,7 +114,7 @@ Using the student-management-rag tools, create a chart of attendance trend by mo
 
 ## 6. MCP Tools Exposed To LM Studio Chat
 
-`student_rag.mcp_server` exposes these tools:
+`student_rag.mcp.server` exposes these tools:
 
 ### `ask_student_management`
 
@@ -219,7 +221,7 @@ LMSTUDIO_TIMEOUT_SECONDS=30
 Run:
 
 ```powershell
-python -m student_rag.lmstudio_agent
+python -m student_rag.agents.lmstudio
 ```
 
 Or:

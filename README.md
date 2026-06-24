@@ -34,14 +34,21 @@ student_management_agentic_rag/
   src/
     student_rag/
       __init__.py
-      agent.py
-      artifacts.py
-      db.py
-      llm.py
-      lmstudio_agent.py
-      mcp_server.py
       paths.py
-      retrieval.py
+      artifacts.py
+      llm.py
+      data/
+        __init__.py
+        db.py
+        retrieval.py
+      agents/
+        __init__.py
+        deterministic.py
+        lmstudio.py
+      mcp/
+        __init__.py
+        server.py
+        http_server.py
   eval_student_run.py
   pyproject.toml
   requirements.txt
@@ -63,13 +70,13 @@ python scripts/build_student_vectors.py
 Ask questions interactively:
 
 ```powershell
-python -m student_rag.agent
+python -m student_rag.agents.deterministic
 ```
 
 Run the LM Studio tool-calling agent:
 
 ```powershell
-python -m student_rag.lmstudio_agent
+python -m student_rag.agents.lmstudio
 ```
 
 After `pip install -r requirements.txt`, you can also use the console scripts:
@@ -114,7 +121,7 @@ LMSTUDIO_MODEL=qwen/qwen3-4b-thinking-2507
 LMSTUDIO_TIMEOUT_SECONDS=30
 ```
 
-Use `student_rag.agent` for the deterministic workflow with fallback planning. Use `student_rag.lmstudio_agent` when you want LM Studio to choose and call tools directly through the OpenAI-compatible tool-calling API.
+Use `student_rag.agents.deterministic` for the deterministic workflow with fallback planning. Use `student_rag.agents.lmstudio` when you want LM Studio to choose and call tools directly through the OpenAI-compatible tool-calling API.
 
 For detailed setup, tool behavior, and troubleshooting, see `docs/LMSTUDIO_CHAT_AGENT_GUIDE.md`.
 
@@ -123,3 +130,5 @@ For terminal commands and validation steps, see `docs/CLI_GUIDE.md`.
 For Cursor Chat MCP setup, see `docs/CURSOR_CHAT_MCP_GUIDE.md`.
 
 For testing the Python API tool loop, see `docs/API_TESTING_GUIDE.md`.
+
+For running the MCP server from another machine, see `docs/REMOTE_MCP_SERVER_GUIDE.md`.

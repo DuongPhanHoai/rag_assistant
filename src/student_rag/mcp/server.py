@@ -4,9 +4,9 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from student_rag.artifacts import generate_table_or_chart_spec
-from student_rag.db import get_schema_summary as get_db_schema_summary
-from student_rag.db import run_sql as run_student_sql
-from student_rag.retrieval import retrieve_notes as retrieve_student_notes
+from student_rag.data.db import get_schema_summary as get_db_schema_summary
+from student_rag.data.db import run_sql as run_student_sql
+from student_rag.data.retrieval import retrieve_notes as retrieve_student_notes
 
 
 mcp = FastMCP("student-management-rag")

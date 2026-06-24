@@ -9,7 +9,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.append(str(SRC_DIR))
 
 from student_rag.paths import ROOT_DIR, VECTOR_DB_DIR  # noqa: E402
-from student_rag.retrieval import build_student_vectorstore  # noqa: E402
+from student_rag.data.retrieval import build_student_vectorstore  # noqa: E402
 
 
 def main() -> None:
