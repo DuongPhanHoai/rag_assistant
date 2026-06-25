@@ -1,6 +1,18 @@
 import argparse
+import socket
 
 from student_rag.mcp.server import mcp
+
+
+def _lan_ip_hint() -> str:
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(("8.8.8.8", 80))
+        ip = probe.getsockname()[0]
+        probe.close()
+        return ip
+    except OSError:
+        return "MACHINE_A_IP"
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,8 +49,12 @@ def main() -> None:
 
     if args.transport == "streamable-http":
         print(f"Starting Student Management MCP server at http://{args.host}:{args.port}{args.mcp_path}")
+        print(f"Health check: http://{_lan_ip_hint()}:{args.port}/health")
+        print(f"LM Studio mcp.json url: http://{_lan_ip_hint()}:{args.port}{args.mcp_path}")
     else:
         print(f"Starting Student Management MCP SSE server at http://{args.host}:{args.port}{args.sse_path}")
+        print(f"Health check: http://{_lan_ip_hint()}:{args.port}/health")
+        print(f"LM Studio mcp.json url: http://{_lan_ip_hint()}:{args.port}{args.sse_path}")
 
     mcp.run(transport=args.transport)
 

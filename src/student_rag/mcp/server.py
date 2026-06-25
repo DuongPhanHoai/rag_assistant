@@ -2,6 +2,8 @@ import json
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from student_rag.artifacts import generate_table_or_chart_spec
 from student_rag.data.db import get_schema_summary as get_db_schema_summary
@@ -10,6 +12,12 @@ from student_rag.data.retrieval import retrieve_notes as retrieve_student_notes
 
 
 mcp = FastMCP("student-management-rag")
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    """Simple HTTP health check for remote connectivity testing."""
+    return JSONResponse({"status": "ok", "service": "student-management-rag"})
 
 
 def _json(data: Any) -> str:

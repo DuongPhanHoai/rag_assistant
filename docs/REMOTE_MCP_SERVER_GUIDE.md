@@ -41,7 +41,17 @@ Start streamable HTTP MCP:
 python scripts/run_student_mcp_http_server.py --host 0.0.0.0 --port 8765 --transport streamable-http --unsafe-disable-dns-rebinding-protection
 ```
 
-Endpoint:
+Wait until you see:
+
+```text
+INFO:     Uvicorn running on http://0.0.0.0:8765
+Health check: http://192.168.x.x:8765/health
+LM Studio mcp.json url: http://192.168.x.x:8765/mcp
+```
+
+The first startup can take 20–40 seconds while Python loads dependencies.
+
+Endpoint for LM Studio:
 
 ```text
 http://MACHINE_A_IP:8765/mcp
@@ -59,11 +69,23 @@ SSE endpoint:
 http://MACHINE_A_IP:8765/sse
 ```
 
-## 3. Windows Firewall
+## 3. Windows Firewall On Machine A
 
-Allow inbound traffic to port `8765` on Machine A.
+The server can work locally but still be blocked from other machines. Open port `8765` on Machine A.
 
-For local LAN testing, keep access limited to your trusted network. Do not expose this server directly to the public internet.
+PowerShell (run as Administrator on Machine A):
+
+```powershell
+New-NetFirewallRule -DisplayName "Student MCP 8765" -Direction Inbound -Protocol TCP -LocalPort 8765 -Action Allow -Profile Private
+```
+
+Also confirm Machine A's LAN IP:
+
+```powershell
+ipconfig
+```
+
+Use the `IPv4 Address` from your active Wi‑Fi or Ethernet adapter, for example `192.168.1.168`. Do not use `127.0.0.1` or `localhost` in LM Studio on Machine B.
 
 ## 4. Cursor Remote MCP Config
 
@@ -94,7 +116,7 @@ If your Cursor version expects SSE:
 Replace `MACHINE_A_IP` with the actual LAN IP address, for example:
 
 ```text
-192.168.1.20
+192.168.1.168
 ```
 
 ## 5. LM Studio Remote MCP Config
@@ -123,21 +145,55 @@ If streamable HTTP does not work in your LM Studio version, run the server with 
 }
 ```
 
-## 6. Test From The Client Machine
+Enable MCP from `mcp.json` in LM Studio server settings if that option exists in your version.
 
-From Machine B, check the server is reachable:
+## 6. Test Connectivity
+
+### Important: `/mcp` is not a normal web page
+
+Opening `http://MACHINE_A_IP:8765/mcp` in a browser often shows **406 Not Acceptable**. That usually means the server is running. The `/mcp` endpoint expects MCP protocol headers, not a browser GET.
+
+Use the health endpoint instead:
 
 ```powershell
-Invoke-WebRequest http://MACHINE_A_IP:8765/mcp
+Invoke-WebRequest http://MACHINE_A_IP:8765/health
 ```
 
-For SSE mode:
+Expected response:
+
+```json
+{"status":"ok","service":"student-management-rag"}
+```
+
+### Test from Machine A (same machine)
 
 ```powershell
-Invoke-WebRequest http://MACHINE_A_IP:8765/sse
+Invoke-WebRequest http://127.0.0.1:8765/health
+Invoke-WebRequest http://192.168.x.x:8765/health
 ```
 
-The response may not look like a normal web page. The important part is that the request reaches the server and does not fail with connection refused or timeout.
+Both should return `status: ok`.
+
+### Test from Machine B (LM Studio machine)
+
+```powershell
+Invoke-WebRequest http://MACHINE_A_IP:8765/health
+```
+
+| Result | Meaning |
+|--------|---------|
+| `{"status":"ok",...}` | Network path works; configure LM Studio with the matching `/mcp` or `/sse` URL |
+| `Connection refused` | Server not running, wrong port, or firewall blocking |
+| `Timed out` | Wrong IP, different subnet, or firewall blocking |
+| `406` on `/mcp` only | Server is up; use `/health` for browser tests |
+
+### Verify the server is listening on Machine A
+
+```powershell
+netstat -ano | findstr :8765
+```
+
+You should see `LISTENING` on `0.0.0.0:8765`.
 
 ## 7. Chat Prompt
 
@@ -171,30 +227,40 @@ Do not:
 
 ## 9. Troubleshooting
 
-### Client Cannot Connect
+### Browser shows 406 on `/mcp`
+
+This is normal. The MCP endpoint is not meant for browsers. Test `/health` instead.
+
+### Client cannot connect (refused or timeout)
 
 Check:
 
-- Machine A server is running.
-- Machine A firewall allows port `8765`.
-- Machine B can ping or reach Machine A.
-- The config uses the correct transport path: `/mcp` or `/sse`.
+- Machine A server is running and shows `Uvicorn running on http://0.0.0.0:8765`.
+- Machine A firewall allows inbound TCP `8765`.
+- Machine B uses Machine A's LAN IP (`192.168.x.x`), not `localhost`.
+- The IP is not mistyped (for example `182.168.x.x` instead of `192.168.x.x`).
+- Server transport matches client URL: `streamable-http` → `/mcp`, `sse` → `/sse`.
+- Both machines are on the same network.
 
-### DNS Rebinding Or Host Header Error
+### DNS rebinding or host header error
 
-For LAN testing, this guide uses:
+For LAN testing, start the server with:
 
 ```powershell
 --unsafe-disable-dns-rebinding-protection
 ```
 
-This disables FastMCP host/origin restrictions. Use it only on trusted networks.
+Use this only on trusted networks.
 
-### Tools Are Visible But Slow
+### LM Studio shows tools but they fail
+
+Try SSE transport on the server and switch the client URL to `/sse`.
+
+### Tools are visible but slow
 
 The first vector query may load the embedding model and take longer. After that, retrieval should be faster.
 
-### Prefer Local MCP If Possible
+### Prefer local MCP if possible
 
 If Cursor/LM Studio and the project are on the same machine, prefer the local stdio server:
 
