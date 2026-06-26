@@ -1,6 +1,6 @@
-student_id,term,risk_factor,evidence_text,source_file
-S008,2026-Spring,Irregular Attendance,Notes mention irregular attendance and difficulty completing programming labs.,student_risk_factors.csv
-S008,2026-Spring,Balance Due Greater Than 500,Notes mention overdue fees.,student_risk_factors.csv
-S004,2026-Spring,Irregular Attendance,Advising notes mention missed labs and late project work.,student_risk_factors.csv
-S004,2026-Spring,Balance Due Greater Than 500,Advising notes mention a large unpaid fee balance.,student_risk_factors.csv
-S002,2026-Spring,Irregular Attendance,Commute issues affected March attendance.,student_risk_factors.csv
+student_id,term,risk_factor,evidence_text,source_data
+S008,2026-Spring,Irregular Attendance,Notes mention irregular attendance and difficulty completing programming labs.,student_risk_factors
+S008,2026-Spring,Balance Due Greater Than 500,Notes mention overdue fees.,student_risk_factors
+S004,2026-Spring,Irregular Attendance,Advising notes mention missed labs and late project work.,student_risk_factors
+S004,2026-Spring,Balance Due Greater Than 500,Advising notes mention a large unpaid fee balance.,student_risk_factors
+S002,2026-Spring,Irregular Attendance,Commute issues affected March attendance.,student_risk_factors

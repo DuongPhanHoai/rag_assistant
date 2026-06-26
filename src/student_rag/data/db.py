@@ -152,7 +152,7 @@ CREATE TABLE risk_policy_links (
     risk_factor TEXT NOT NULL,
     policy_id TEXT NOT NULL REFERENCES policies(policy_id),
     evidence_text TEXT NOT NULL,
-    source_file TEXT NOT NULL,
+    source_data TEXT NOT NULL,
     PRIMARY KEY (risk_factor, policy_id)
 );
 
@@ -160,7 +160,7 @@ CREATE TABLE policy_intervention_links (
     policy_id TEXT NOT NULL REFERENCES policies(policy_id),
     intervention_id TEXT NOT NULL REFERENCES interventions(intervention_id),
     evidence_text TEXT NOT NULL,
-    source_file TEXT NOT NULL,
+    source_data TEXT NOT NULL,
     PRIMARY KEY (policy_id, intervention_id)
 );
 
@@ -177,7 +177,7 @@ CREATE TABLE student_risk_factors (
     term TEXT NOT NULL,
     risk_factor TEXT NOT NULL,
     evidence_text TEXT NOT NULL,
-    source_file TEXT NOT NULL,
+    source_data TEXT NOT NULL,
     PRIMARY KEY (student_id, term, risk_factor)
 );
 
@@ -186,7 +186,7 @@ CREATE TABLE student_interventions (
     term TEXT NOT NULL,
     intervention_id TEXT NOT NULL REFERENCES interventions(intervention_id),
     evidence_text TEXT NOT NULL,
-    source_file TEXT NOT NULL,
+    source_data TEXT NOT NULL,
     PRIMARY KEY (student_id, term, intervention_id)
 );
 
@@ -194,7 +194,7 @@ CREATE TABLE course_policy_links (
     course_id TEXT NOT NULL REFERENCES courses(course_id),
     policy_id TEXT NOT NULL REFERENCES policies(policy_id),
     evidence_text TEXT NOT NULL,
-    source_file TEXT NOT NULL,
+    source_data TEXT NOT NULL,
     PRIMARY KEY (course_id, policy_id)
 );
 """

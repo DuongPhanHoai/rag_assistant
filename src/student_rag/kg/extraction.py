@@ -94,7 +94,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "TRIGGERS_POLICY",
                 "Policy",
                 policy_names[row["policy_id"]],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -107,7 +107,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "RECOMMENDS_INTERVENTION",
                 "Intervention",
                 intervention_names[row["intervention_id"]],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -121,7 +121,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "HAS_RISK_FACTOR",
                 "RiskFactor",
                 row["risk_factor"],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -135,7 +135,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "RECOMMENDS_INTERVENTION",
                 "Intervention",
                 intervention_names[row["intervention_id"]],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -149,7 +149,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "ENROLLED_IN",
                 "Course",
                 row["course_id"],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -162,7 +162,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "MENTIONED_IN",
                 "Policy",
                 policy_names[row["policy_id"]],
-                row["source_file"],
+                row["source_data"],
                 row["evidence_text"],
             )
         )
@@ -176,7 +176,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "ADVISED_BY",
                 "Advisor",
                 row["advisor"],
-                "students.csv",
+                "students",
                 f"{student_name} is advised by {row['advisor']}.",
             )
         )
@@ -187,7 +187,7 @@ def build_graph_facts(data_dir: Path | None = None) -> list[GraphFact]:
                 "BELONGS_TO_PROGRAM",
                 "Program",
                 row["program"],
-                "students.csv",
+                "students",
                 f"{student_name} is enrolled in {row['program']}.",
             )
         )

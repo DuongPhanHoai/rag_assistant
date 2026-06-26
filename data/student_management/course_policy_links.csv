@@ -1,2 +1,2 @@
-course_id,policy_id,evidence_text,source_file
-C102,P001,Python for Analytics is a core analytics course.,courses.csv
+course_id,policy_id,evidence_text,source_data
+C102,P001,Python for Analytics is a core analytics course.,courses

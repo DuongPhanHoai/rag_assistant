@@ -1,5 +1,5 @@
-policy_id,intervention_id,evidence_text,source_file
-P002,I001,Recommended interventions include weekly lab attendance.,policies.csv
-P004,I002,Recommended interventions include financial aid review.,policies.csv
-P001,I003,High-risk students should receive a coordinated plan.,policies.csv
-P003,I004,Scholarship support is prioritized for students with strong academic standing.,policies.csv
+policy_id,intervention_id,evidence_text,source_data
+P002,I001,Recommended interventions include weekly lab attendance.,policies
+P004,I002,Recommended interventions include financial aid review.,policies
+P001,I003,High-risk students should receive a coordinated plan.,policies
+P003,I004,Scholarship support is prioritized for students with strong academic standing.,policies

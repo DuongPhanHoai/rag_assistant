@@ -193,11 +193,12 @@ def get_student_graph_context(student_name: str) -> dict[str, Any]:
 
 def get_policy_intervention_path(student_name: str) -> dict[str, Any]:
     cypher = """
-    MATCH (s:Student {name: $student_name})-[:HAS_RISK_FACTOR]->(rf:RiskFactor)
-    OPTIONAL MATCH (rf)-[:TRIGGERS_POLICY]->(p:Policy)
-    OPTIONAL MATCH (p)-[:RECOMMENDS_INTERVENTION]->(i:Intervention)
+    MATCH (s:Student {name: $student_name})-[r1:HAS_RISK_FACTOR]->(rf:RiskFactor)
+    OPTIONAL MATCH (rf)-[r2:TRIGGERS_POLICY]->(p:Policy)
+    OPTIONAL MATCH (p)-[r3:RECOMMENDS_INTERVENTION]->(i:Intervention)
     RETURN s.name AS student_name, rf.name AS risk_factor, p.name AS policy,
-           i.name AS intervention, rf.source_doc AS source_doc
+           i.name AS intervention,
+           coalesce(r3.source_doc, r2.source_doc, r1.source_doc) AS source_doc
     ORDER BY risk_factor, policy, intervention
     """
     result = run_read_only_cypher(cypher, {"student_name": student_name})
@@ -210,9 +211,9 @@ def get_policy_intervention_path(student_name: str) -> dict[str, Any]:
 
 def get_related_risk_factors(student_name: str) -> dict[str, Any]:
     cypher = """
-    MATCH (s:Student {name: $student_name})-[:HAS_RISK_FACTOR]->(rf:RiskFactor)
-    RETURN s.name AS student_name, rf.name AS risk_factor, rf.source_doc AS source_doc,
-           rf.evidence_text AS evidence_text
+    MATCH (s:Student {name: $student_name})-[r:HAS_RISK_FACTOR]->(rf:RiskFactor)
+    RETURN s.name AS student_name, rf.name AS risk_factor, r.source_doc AS source_doc,
+           r.evidence_text AS evidence_text
     ORDER BY risk_factor
     """
     result = run_read_only_cypher(cypher, {"student_name": student_name})
