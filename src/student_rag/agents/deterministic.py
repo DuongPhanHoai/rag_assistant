@@ -3,7 +3,7 @@ import logging
 import re
 from typing import Any
 
-from student_rag.artifacts import generate_table_or_chart_spec, markdown_table
+from student_rag.artifacts import generate_table_or_chart_spec, graph_artifact_from_context, markdown_table
 from student_rag.data.db import get_schema_summary, run_sql
 from student_rag.kg.neo4j_store import (
     Neo4jUnavailableError,
@@ -413,6 +413,7 @@ Answer the student management question using only the evidence below.
 
 Rules:
 - Be concise and factual.
+- When graph_context is present, state the risk factors and the policy -> intervention path explicitly from graph evidence.
 - Mention when the answer depends on both structured data and graph policy or intervention context.
 - If a chart spec is included, describe what the chart shows.
 - Include practical next actions when the question is about risk or intervention.
@@ -436,7 +437,14 @@ def answer_student_question(question: str) -> dict[str, Any]:
     plan = plan_question(question)
     steps = decompose_query_request(plan)
 
-    sql_result = run_sql(plan["sql"]) if plan.get("needs_sql") else None
+    sql_result = None
+    if plan.get("needs_sql") and plan.get("sql"):
+        try:
+            sql_result = run_sql(plan["sql"])
+        except Exception as exc:
+            logger.warning("SQL execution failed: %s", exc)
+            sql_result = {"sql": plan["sql"], "error": str(exc), "rows": [], "columns": []}
+
     graph_context = (
         get_graph_evidence(question, plan.get("graph_query") or question)
         if plan.get("needs_graph")
@@ -449,6 +457,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
         sql_result=sql_result or {"rows": [], "columns": []},
         needs_chart=bool(plan.get("needs_chart")),
     )
+    graph_artifact = graph_artifact_from_context(graph_context)
     answer, used_llm_answer = answer_from_evidence(question, plan, sql_result, graph_context, artifact)
     sources = _graph_sources(graph_context)
 
@@ -459,6 +468,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
         "sql_result": sql_result,
         "graph_context": graph_context,
         "artifact": artifact,
+        "graph_artifact": graph_artifact,
         "answer": answer,
         "sources": sources,
         "mode": "llm" if used_llm_answer else "offline_evidence",
@@ -478,8 +488,12 @@ def main() -> None:
             print("\nPlan:")
             print(json.dumps(result["plan"], indent=2))
             print("\nAnswer:\n", result["answer"])
-            if result["artifact"]["type"] == "table":
-                print("\nTable:\n", result["artifact"]["markdown"])
+            graph_artifact = result.get("graph_artifact") or {}
+            if graph_artifact.get("markdown"):
+                print("\nGraph evidence:\n", graph_artifact["markdown"])
+            if result["artifact"]["type"] == "table" and result["artifact"].get("markdown"):
+                if result["artifact"]["markdown"] != "No rows returned.":
+                    print("\nStructured table:\n", result["artifact"]["markdown"])
             else:
                 print("\nChart spec:\n", json.dumps(result["artifact"]["chart_spec"], indent=2))
             print("\nSources:")
