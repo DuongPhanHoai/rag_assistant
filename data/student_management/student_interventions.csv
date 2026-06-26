@@ -1,0 +1,5 @@
+student_id,term,intervention_id,evidence_text,source_file
+S002,2026-Spring,I001,Advisor recommended a catch-up plan with weekly lab attendance.,advising_notes.csv
+S001,2026-Spring,I004,She is a good candidate for peer tutoring.,advising_notes.csv
+S006,2026-Spring,I005,Advisor suggested study-group participation before the next assessment.,advising_notes.csv
+S004,2026-Spring,I003,Intervention team recommended a meeting with the advisor and financial aid.,advising_notes.csv

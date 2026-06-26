@@ -154,7 +154,7 @@ def plan_question(question: str) -> dict[str, Any]:
     schema = get_schema_summary()
     prompt = f"""
 You are planning a small agentic RAG workflow over a Student Management SQLite database and a Neo4j
-knowledge graph built from policies and advising notes with AutoSchemaKG.
+knowledge graph built from policy and advising CSV files with AutoSchemaKG.
 
 Return only JSON with these keys:
 - reasoning: short explanation

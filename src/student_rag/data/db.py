@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from student_rag.data.policy_loader import build_student_risk_summary_view, load_policy_rules
 from student_rag.paths import DATA_DIR, DB_PATH
 
 
@@ -26,6 +27,18 @@ TABLE_FILES = {
     "fees": "fees.csv",
 }
 
+POLICY_TABLE_FILES = {
+    "policy_rules": "policy_rules.csv",
+    "policies": "policies.csv",
+    "interventions": "interventions.csv",
+    "risk_policy_links": "risk_policy_links.csv",
+    "policy_intervention_links": "policy_intervention_links.csv",
+    "advising_notes": "advising_notes.csv",
+    "student_risk_factors": "student_risk_factors.csv",
+    "student_interventions": "student_interventions.csv",
+    "course_policy_links": "course_policy_links.csv",
+}
+
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -37,6 +50,15 @@ DROP VIEW IF EXISTS fee_summary;
 DROP VIEW IF EXISTS attendance_summary;
 DROP VIEW IF EXISTS assessment_scores;
 
+DROP TABLE IF EXISTS student_interventions;
+DROP TABLE IF EXISTS student_risk_factors;
+DROP TABLE IF EXISTS advising_notes;
+DROP TABLE IF EXISTS course_policy_links;
+DROP TABLE IF EXISTS policy_intervention_links;
+DROP TABLE IF EXISTS risk_policy_links;
+DROP TABLE IF EXISTS interventions;
+DROP TABLE IF EXISTS policies;
+DROP TABLE IF EXISTS policy_rules;
 DROP TABLE IF EXISTS fees;
 DROP TABLE IF EXISTS assessments;
 DROP TABLE IF EXISTS attendance;
@@ -59,7 +81,8 @@ CREATE TABLE courses (
     course_name TEXT NOT NULL,
     department TEXT NOT NULL,
     credits INTEGER NOT NULL,
-    instructor TEXT NOT NULL
+    instructor TEXT NOT NULL,
+    description TEXT
 );
 
 CREATE TABLE enrollments (
@@ -100,10 +123,84 @@ CREATE TABLE fees (
     due_date TEXT NOT NULL,
     status TEXT NOT NULL
 );
+
+CREATE TABLE policy_rules (
+    rule_id TEXT PRIMARY KEY,
+    category TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    operator TEXT NOT NULL,
+    threshold_value REAL NOT NULL,
+    term TEXT NOT NULL,
+    active INTEGER NOT NULL,
+    reason_label TEXT
+);
+
+CREATE TABLE policies (
+    policy_id TEXT PRIMARY KEY,
+    policy_name TEXT NOT NULL UNIQUE,
+    summary TEXT NOT NULL,
+    source_section TEXT
+);
+
+CREATE TABLE interventions (
+    intervention_id TEXT PRIMARY KEY,
+    intervention_name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL
+);
+
+CREATE TABLE risk_policy_links (
+    risk_factor TEXT NOT NULL,
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    evidence_text TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (risk_factor, policy_id)
+);
+
+CREATE TABLE policy_intervention_links (
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    intervention_id TEXT NOT NULL REFERENCES interventions(intervention_id),
+    evidence_text TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (policy_id, intervention_id)
+);
+
+CREATE TABLE advising_notes (
+    note_id TEXT PRIMARY KEY,
+    student_id TEXT NOT NULL REFERENCES students(student_id),
+    term TEXT NOT NULL,
+    note_text TEXT NOT NULL,
+    recommended_intervention_id TEXT REFERENCES interventions(intervention_id)
+);
+
+CREATE TABLE student_risk_factors (
+    student_id TEXT NOT NULL REFERENCES students(student_id),
+    term TEXT NOT NULL,
+    risk_factor TEXT NOT NULL,
+    evidence_text TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (student_id, term, risk_factor)
+);
+
+CREATE TABLE student_interventions (
+    student_id TEXT NOT NULL REFERENCES students(student_id),
+    term TEXT NOT NULL,
+    intervention_id TEXT NOT NULL REFERENCES interventions(intervention_id),
+    evidence_text TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (student_id, term, intervention_id)
+);
+
+CREATE TABLE course_policy_links (
+    course_id TEXT NOT NULL REFERENCES courses(course_id),
+    policy_id TEXT NOT NULL REFERENCES policies(policy_id),
+    evidence_text TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    PRIMARY KEY (course_id, policy_id)
+);
 """
 
 
-VIEW_SQL = """
+VIEW_SQL_PREFIX = """
 CREATE VIEW assessment_scores AS
 SELECT
     a.student_id,
@@ -143,64 +240,10 @@ SELECT
     f.status
 FROM fees f
 JOIN students s ON s.student_id = f.student_id;
+"""
 
-CREATE VIEW student_risk_summary AS
-WITH grade AS (
-    SELECT
-        student_id,
-        term,
-        ROUND(AVG(weighted_score), 2) AS avg_score,
-        SUM(CASE WHEN weighted_score < 70 THEN 1 ELSE 0 END) AS low_score_courses
-    FROM assessment_scores
-    GROUP BY student_id, term
-),
-att AS (
-    SELECT
-        student_id,
-        term,
-        ROUND(100.0 * SUM(sessions_attended) / SUM(sessions_held), 2) AS attendance_pct
-    FROM attendance_summary
-    GROUP BY student_id, term
-),
-fees_due AS (
-    SELECT
-        student_id,
-        term,
-        balance_due,
-        status
-    FROM fee_summary
-)
-SELECT
-    s.student_id,
-    s.first_name || ' ' || s.last_name AS student_name,
-    s.program,
-    s.year_level,
-    s.advisor,
-    g.term,
-    g.avg_score,
-    a.attendance_pct,
-    f.balance_due,
-    f.status AS fee_status,
-    g.low_score_courses,
-    CASE
-        WHEN g.avg_score < 70 OR a.attendance_pct < 75 OR f.balance_due > 500 THEN 'high'
-        WHEN g.avg_score < 80 OR a.attendance_pct < 85 OR f.balance_due > 0 THEN 'medium'
-        ELSE 'low'
-    END AS risk_level,
-    TRIM(
-        CASE WHEN g.avg_score < 70 THEN 'low grades; ' ELSE '' END ||
-        CASE WHEN a.attendance_pct < 75 THEN 'low attendance; ' ELSE '' END ||
-        CASE WHEN f.balance_due > 500 THEN 'large fee balance; ' ELSE '' END
-    ) AS risk_reasons,
-    CASE
-        WHEN g.avg_score >= 85 AND a.attendance_pct >= 85 AND f.balance_due = 0 THEN 1
-        ELSE 0
-    END AS scholarship_candidate
-FROM students s
-JOIN grade g ON g.student_id = s.student_id
-JOIN att a ON a.student_id = s.student_id AND a.term = g.term
-JOIN fees_due f ON f.student_id = s.student_id AND f.term = g.term;
 
+VIEW_SQL_SUFFIX = """
 CREATE VIEW course_performance_summary AS
 SELECT
     c.course_id,
@@ -239,17 +282,25 @@ GROUP BY a.student_id, a.term, a.month;
 
 def load_csv_table(conn: sqlite3.Connection, table_name: str, csv_name: str) -> None:
     csv_path = DATA_DIR / csv_name
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
+    with csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
         columns = reader.fieldnames or []
         placeholders = ", ".join(["?"] * len(columns))
         column_list = ", ".join(columns)
-        rows = [tuple(row[column] for column in columns) for row in reader]
+        rows = [
+            tuple(row[column] if row[column] != "" else None for column in columns)
+            for row in reader
+        ]
 
     conn.executemany(
         f"INSERT INTO {table_name} ({column_list}) VALUES ({placeholders})",
         rows,
     )
+
+
+def build_view_sql() -> str:
+    rules = load_policy_rules()
+    return VIEW_SQL_PREFIX + build_student_risk_summary_view(rules) + VIEW_SQL_SUFFIX
 
 
 def build_database(db_path: Path = DB_PATH) -> Path:
@@ -264,7 +315,9 @@ def build_database(db_path: Path = DB_PATH) -> Path:
         conn.executescript(SCHEMA_SQL)
         for table_name, csv_name in TABLE_FILES.items():
             load_csv_table(conn, table_name, csv_name)
-        conn.executescript(VIEW_SQL)
+        for table_name, csv_name in POLICY_TABLE_FILES.items():
+            load_csv_table(conn, table_name, csv_name)
+        conn.executescript(build_view_sql())
         conn.commit()
     finally:
         conn.close()
@@ -304,9 +357,11 @@ def get_schema_summary() -> str:
                 "",
                 "Important value hints:",
                 "- student_risk_summary.risk_level uses text values: 'high', 'medium', 'low'.",
+                "- student_risk_summary thresholds come from policy_rules loaded from policy_rules.csv.",
                 "- student_risk_summary.scholarship_candidate uses integer values: 1 means yes, 0 means no.",
                 "- student_risk_summary.term uses values such as '2026-Spring'; there is no 'current_term' value.",
                 "- fee_summary.status uses text values: 'paid', 'partial', 'overdue'.",
+                "- Policy and intervention relationships use policy_id and intervention_id foreign keys in link tables.",
             ]
         )
         summary = "\n".join(lines)

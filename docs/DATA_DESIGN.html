@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Student Management Data Design</title>
+  <style>
+    body {
+      color: #1f2937;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+      margin: 40px auto;
+      max-width: 1040px;
+      padding: 0 24px;
+    }
+    h1, h2, h3 {
+      color: #111827;
+    }
+    h1 {
+      border-bottom: 2px solid #d1d5db;
+      padding-bottom: 12px;
+    }
+    h2 {
+      border-bottom: 1px solid #e5e7eb;
+      margin-top: 36px;
+      padding-bottom: 8px;
+    }
+    .diagram {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+      padding: 16px;
+      background: #fff;
+    }
+    svg {
+      display: block;
+      min-width: 920px;
+    }
+    .box {
+      fill: #f9fafb;
+      stroke: #374151;
+      stroke-width: 1.4;
+    }
+    .box-csv {
+      fill: #eff6ff;
+      stroke: #2563eb;
+    }
+    .box-sqlite {
+      fill: #ecfdf5;
+      stroke: #059669;
+    }
+    .box-neo4j {
+      fill: #fef3c7;
+      stroke: #d97706;
+    }
+    .label {
+      fill: #111827;
+      font-size: 13px;
+      text-anchor: middle;
+    }
+    .label-small {
+      fill: #4b5563;
+      font-size: 11px;
+      text-anchor: middle;
+    }
+    .arrow {
+      fill: none;
+      marker-end: url(#arrowhead);
+      stroke: #374151;
+      stroke-width: 1.5;
+    }
+    code {
+      background: #f3f4f6;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+    table {
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 12px 0 24px;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .note {
+      background: #f8fafc;
+      border-left: 4px solid #2563eb;
+      margin: 16px 0;
+      padding: 12px 16px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 8px 0 16px;
+    }
+    .legend span {
+      align-items: center;
+      display: inline-flex;
+      font-size: 13px;
+      gap: 8px;
+    }
+    .swatch {
+      border: 1px solid #9ca3af;
+      border-radius: 4px;
+      display: inline-block;
+      height: 14px;
+      width: 14px;
+    }
+    .swatch-csv { background: #eff6ff; border-color: #2563eb; }
+    .swatch-sqlite { background: #ecfdf5; border-color: #059669; }
+    .swatch-neo4j { background: #fef3c7; border-color: #d97706; }
+  </style>
+</head>
+<body>
+  <h1>Student Management Data Design</h1>
+  <p>
+    This document describes the data layer for the Student Management Agentic RAG sample.
+    All seed content lives under <code>data/student_management/</code> as CSV files.
+    Build scripts materialize SQLite for structured analytics and Neo4j for policy and intervention relationships.
+  </p>
+
+  <div class="note">
+    <strong>Source of truth:</strong> edit CSV files, then rebuild.
+    <code>python scripts/build_student_db.py</code> and
+    <code>python scripts/build_student_kg.py</code>.
+    Do not hardcode policy thresholds in Python source.
+  </div>
+
+  <h2>1. High-Level Data Flow</h2>
+  <div class="legend">
+    <span><i class="swatch swatch-csv"></i> CSV seed files</span>
+    <span><i class="swatch swatch-sqlite"></i> SQLite runtime store</span>
+    <span><i class="swatch swatch-neo4j"></i> Neo4j knowledge graph</span>
+  </div>
+  <div class="diagram">
+    <svg viewBox="0 0 960 360" role="img" aria-label="Data build flow diagram">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+      <rect class="box box-csv" x="30" y="30" width="200" height="70" rx="8"></rect>
+      <text class="label" x="130" y="58">Operational CSVs</text>
+      <text class="label-small" x="130" y="78">students, courses, fees, ...</text>
+
+      <rect class="box box-csv" x="30" y="130" width="200" height="70" rx="8"></rect>
+      <text class="label" x="130" y="158">Policy CSVs</text>
+      <text class="label-small" x="130" y="178">policy_rules, policies, links</text>
+
+      <rect class="box box-csv" x="30" y="230" width="200" height="70" rx="8"></rect>
+      <text class="label" x="130" y="258">Advising / graph CSVs</text>
+      <text class="label-small" x="130" y="278">notes, risk factors, paths</text>
+
+      <rect class="box" x="300" y="80" width="180" height="56" rx="8"></rect>
+      <text class="label" x="390" y="105">build_student_db.py</text>
+      <text class="label-small" x="390" y="122">student_rag.data.db</text>
+
+      <rect class="box" x="300" y="200" width="180" height="56" rx="8"></rect>
+      <text class="label" x="390" y="225">build_student_kg.py</text>
+      <text class="label-small" x="390" y="242">student_rag.kg.extraction</text>
+
+      <rect class="box box-sqlite" x="560" y="60" width="200" height="96" rx="8"></rect>
+      <text class="label" x="660" y="88">student_management.sqlite</text>
+      <text class="label-small" x="660" y="108">tables + policy_rules</text>
+      <text class="label-small" x="660" y="126">analytical views</text>
+
+      <rect class="box box-neo4j" x="560" y="190" width="200" height="96" rx="8"></rect>
+      <text class="label" x="660" y="218">Neo4j StudentDB</text>
+      <text class="label-small" x="660" y="238">nodes + relationships</text>
+      <text class="label-small" x="660" y="256">evidence_text, source_doc</text>
+
+      <rect class="box" x="800" y="120" width="140" height="96" rx="8"></rect>
+      <text class="label" x="870" y="150">Agents / MCP</text>
+      <text class="label-small" x="870" y="170">run_sql</text>
+      <text class="label-small" x="870" y="188">graph tools</text>
+
+      <path class="arrow" d="M230 65 L300 108"></path>
+      <path class="arrow" d="M230 165 L300 108"></path>
+      <path class="arrow" d="M230 265 L300 228"></path>
+      <path class="arrow" d="M230 165 L300 228"></path>
+      <path class="arrow" d="M480 108 L560 108"></path>
+      <path class="arrow" d="M480 228 L560 238"></path>
+      <path class="arrow" d="M760 108 L800 150"></path>
+      <path class="arrow" d="M760 238 L800 190"></path>
+    </svg>
+    <p>
+      Operational and policy CSV files load into SQLite.
+      Policy and advising link CSV files also feed Neo4j through <code>extraction.py</code>.
+      <code>policy_loader.py</code> reads <code>policy_rules.csv</code> and generates the
+      <code>student_risk_summary</code> view SQL at database build time.
+    </p>
+  </div>
+
+  <h2>2. CSV Catalog</h2>
+
+  <h3>2.1 Operational data (SQLite only)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>CSV file</th>
+        <th>SQLite table</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>students.csv</code></td>
+        <td><code>students</code></td>
+        <td>Student identity, program, advisor, contact</td>
+      </tr>
+      <tr>
+        <td><code>courses.csv</code></td>
+        <td><code>courses</code></td>
+        <td>Course catalog including <code>description</code></td>
+      </tr>
+      <tr>
+        <td><code>enrollments.csv</code></td>
+        <td><code>enrollments</code></td>
+        <td>Student course enrollment by term</td>
+      </tr>
+      <tr>
+        <td><code>attendance.csv</code></td>
+        <td><code>attendance</code></td>
+        <td>Monthly session attendance by student and course</td>
+      </tr>
+      <tr>
+        <td><code>assessments.csv</code></td>
+        <td><code>assessments</code></td>
+        <td>Weighted assessment scores</td>
+      </tr>
+      <tr>
+        <td><code>fees.csv</code></td>
+        <td><code>fees</code></td>
+        <td>Term fee totals, payments, status</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 Policy and advising data (SQLite + Neo4j)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>CSV file</th>
+        <th>SQLite table</th>
+        <th>Neo4j use</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>policy_rules.csv</code></td>
+        <td><code>policy_rules</code></td>
+        <td>No</td>
+        <td>Numeric thresholds for <code>student_risk_summary</code> risk and scholarship logic</td>
+      </tr>
+      <tr>
+        <td><code>policies.csv</code></td>
+        <td><code>policies</code></td>
+        <td>Policy nodes</td>
+        <td>Named policies and summaries</td>
+      </tr>
+      <tr>
+        <td><code>interventions.csv</code></td>
+        <td><code>interventions</code></td>
+        <td>Intervention nodes</td>
+        <td>Intervention catalog</td>
+      </tr>
+      <tr>
+        <td><code>risk_policy_links.csv</code></td>
+        <td><code>risk_policy_links</code></td>
+        <td><code>TRIGGERS_POLICY</code></td>
+        <td>Risk factor to policy mapping</td>
+      </tr>
+      <tr>
+        <td><code>policy_intervention_links.csv</code></td>
+        <td><code>policy_intervention_links</code></td>
+        <td><code>RECOMMENDS_INTERVENTION</code></td>
+        <td>Policy to intervention mapping</td>
+      </tr>
+      <tr>
+        <td><code>advising_notes.csv</code></td>
+        <td><code>advising_notes</code></td>
+        <td>Optional LLM pass</td>
+        <td>Free-text advising notes per student</td>
+      </tr>
+      <tr>
+        <td><code>student_risk_factors.csv</code></td>
+        <td><code>student_risk_factors</code></td>
+        <td><code>HAS_RISK_FACTOR</code></td>
+        <td>Student-specific risk factor links</td>
+      </tr>
+      <tr>
+        <td><code>student_interventions.csv</code></td>
+        <td><code>student_interventions</code></td>
+        <td><code>RECOMMENDS_INTERVENTION</code></td>
+        <td>Student-specific recommended interventions</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 Graph-only CSV files (Neo4j build)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>CSV file</th>
+        <th>Neo4j relationship</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>student_course_context.csv</code></td>
+        <td><code>ENROLLED_IN</code></td>
+        <td>Student course context with evidence text</td>
+      </tr>
+      <tr>
+        <td><code>course_policy_links.csv</code></td>
+        <td><code>course_policy_links</code></td>
+        <td><code>MENTIONED_IN</code></td>
+        <td>Course to policy references (also stored in SQLite)</td>
+      </tr>
+      <tr>
+        <td><code>students.csv</code></td>
+        <td><code>ADVISED_BY</code>, <code>BELONGS_TO_PROGRAM</code></td>
+        <td>Derived advisor and program facts at KG build time</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. SQLite Logical Model</h2>
+
+  <h3>3.1 Foreign key relationships</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>From table</th>
+        <th>Column(s)</th>
+        <th>To table</th>
+        <th>Cardinality</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>enrollments</code></td>
+        <td><code>student_id</code></td>
+        <td><code>students</code></td>
+        <td>N : 1</td>
+        <td>Student enrollment record</td>
+      </tr>
+      <tr>
+        <td><code>enrollments</code></td>
+        <td><code>course_id</code></td>
+        <td><code>courses</code></td>
+        <td>N : 1</td>
+        <td>Course enrolled in</td>
+      </tr>
+      <tr>
+        <td><code>attendance</code></td>
+        <td><code>student_id</code>, <code>course_id</code></td>
+        <td><code>students</code>, <code>courses</code></td>
+        <td>N : 1 each</td>
+        <td>Monthly attendance facts</td>
+      </tr>
+      <tr>
+        <td><code>assessments</code></td>
+        <td><code>student_id</code>, <code>course_id</code></td>
+        <td><code>students</code>, <code>courses</code></td>
+        <td>N : 1 each</td>
+        <td>Weighted assessment scores</td>
+      </tr>
+      <tr>
+        <td><code>fees</code></td>
+        <td><code>student_id</code></td>
+        <td><code>students</code></td>
+        <td>N : 1</td>
+        <td>Term fee records</td>
+      </tr>
+      <tr>
+        <td><code>risk_policy_links</code></td>
+        <td><code>policy_id</code></td>
+        <td><code>policies</code></td>
+        <td>N : 1</td>
+        <td>Risk factor text maps to a policy by ID</td>
+      </tr>
+      <tr>
+        <td><code>policy_intervention_links</code></td>
+        <td><code>policy_id</code></td>
+        <td><code>policies</code></td>
+        <td>N : 1</td>
+        <td>Policy playbook mapping</td>
+      </tr>
+      <tr>
+        <td><code>policy_intervention_links</code></td>
+        <td><code>intervention_id</code></td>
+        <td><code>interventions</code></td>
+        <td>N : 1</td>
+        <td>Recommended intervention for a policy</td>
+      </tr>
+      <tr>
+        <td><code>course_policy_links</code></td>
+        <td><code>course_id</code></td>
+        <td><code>courses</code></td>
+        <td>N : 1</td>
+        <td>Course references a policy</td>
+      </tr>
+      <tr>
+        <td><code>course_policy_links</code></td>
+        <td><code>policy_id</code></td>
+        <td><code>policies</code></td>
+        <td>N : 1</td>
+        <td>Policy referenced by a course</td>
+      </tr>
+      <tr>
+        <td><code>advising_notes</code></td>
+        <td><code>student_id</code></td>
+        <td><code>students</code></td>
+        <td>N : 1</td>
+        <td>One note belongs to one student</td>
+      </tr>
+      <tr>
+        <td><code>advising_notes</code></td>
+        <td><code>recommended_intervention_id</code></td>
+        <td><code>interventions</code></td>
+        <td>N : 0..1</td>
+        <td>Optional suggested intervention</td>
+      </tr>
+      <tr>
+        <td><code>student_risk_factors</code></td>
+        <td><code>student_id</code></td>
+        <td><code>students</code></td>
+        <td>N : 1</td>
+        <td>Student-specific risk factor evidence</td>
+      </tr>
+      <tr>
+        <td><code>student_interventions</code></td>
+        <td><code>student_id</code></td>
+        <td><code>students</code></td>
+        <td>N : 1</td>
+        <td>Student-specific intervention assignment</td>
+      </tr>
+      <tr>
+        <td><code>student_interventions</code></td>
+        <td><code>intervention_id</code></td>
+        <td><code>interventions</code></td>
+        <td>N : 1</td>
+        <td>Intervention recommended for a student</td>
+      </tr>
+      <tr>
+        <td><code>policy_rules</code></td>
+        <td colspan="2"><em>no FK</em></td>
+        <td>standalone</td>
+        <td>Read at <strong>build time</strong> to generate <code>student_risk_summary</code> view SQL; not joined at query time</td>
+      </tr>
+      <tr>
+        <td><code>student_risk_summary</code></td>
+        <td colspan="2"><em>view</em></td>
+        <td>derived</td>
+        <td>Built from grades, attendance, fees rollups + rules copied from <code>policy_rules</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 ER diagram — operational data</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 720 340" role="img" aria-label="SQLite operational ER diagram">
+      <defs>
+        <marker id="arrowhead-op" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+      <rect class="box box-sqlite" x="40" y="130" width="120" height="50" rx="8"></rect>
+      <text class="label" x="100" y="160">students</text>
+      <text class="label-small" x="100" y="174">PK student_id</text>
+
+      <rect class="box box-sqlite" x="560" y="130" width="120" height="50" rx="8"></rect>
+      <text class="label" x="620" y="160">courses</text>
+      <text class="label-small" x="620" y="174">PK course_id</text>
+
+      <rect class="box box-sqlite" x="300" y="40" width="120" height="50" rx="8"></rect>
+      <text class="label" x="360" y="70">enrollments</text>
+
+      <rect class="box box-sqlite" x="180" y="240" width="120" height="50" rx="8"></rect>
+      <text class="label" x="240" y="270">attendance</text>
+
+      <rect class="box box-sqlite" x="340" y="240" width="120" height="50" rx="8"></rect>
+      <text class="label" x="400" y="270">assessments</text>
+
+      <rect class="box box-sqlite" x="500" y="240" width="100" height="50" rx="8"></rect>
+      <text class="label" x="550" y="270">fees</text>
+
+      <text class="label-small" x="230" y="55">student_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M160 155 L300 65"></path>
+      <text class="label-small" x="490" y="55">course_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M420 65 L560 155"></path>
+
+      <text class="label-small" x="175" y="210">student_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M130 165 L210 240"></path>
+      <text class="label-small" x="310" y="210">course_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M620 180 L430 240"></path>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M130 165 L370 240"></path>
+      <path class="arrow" marker-end="url(#arrowhead-op)" d="M130 165 L500 255"></path>
+    </svg>
+  </div>
+
+  <h3>3.3 ER diagram — policy and advising data</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 900 480" role="img" aria-label="SQLite policy ER diagram">
+      <defs>
+        <marker id="arrowhead-pol" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+
+      <rect class="box box-csv" x="30" y="30" width="140" height="56" rx="8"></rect>
+      <text class="label" x="100" y="55">policy_rules</text>
+      <text class="label-small" x="100" y="72">PK rule_id (standalone)</text>
+
+      <rect class="box box-csv" x="330" y="30" width="140" height="56" rx="8"></rect>
+      <text class="label" x="400" y="55">policies</text>
+      <text class="label-small" x="400" y="72">PK policy_id</text>
+
+      <rect class="box box-csv" x="630" y="30" width="150" height="56" rx="8"></rect>
+      <text class="label" x="705" y="55">interventions</text>
+      <text class="label-small" x="705" y="72">PK intervention_id</text>
+
+      <rect class="box box-sqlite" x="30" y="150" width="120" height="50" rx="8"></rect>
+      <text class="label" x="90" y="180">students</text>
+
+      <rect class="box box-sqlite" x="30" y="300" width="120" height="50" rx="8"></rect>
+      <text class="label" x="90" y="330">courses</text>
+
+      <rect class="box box-csv" x="250" y="130" width="170" height="50" rx="8"></rect>
+      <text class="label" x="335" y="160">risk_policy_links</text>
+
+      <rect class="box box-csv" x="470" y="130" width="200" height="50" rx="8"></rect>
+      <text class="label" x="570" y="160">policy_intervention_links</text>
+
+      <rect class="box box-csv" x="250" y="220" width="150" height="50" rx="8"></rect>
+      <text class="label" x="325" y="250">advising_notes</text>
+
+      <rect class="box box-csv" x="250" y="310" width="170" height="50" rx="8"></rect>
+      <text class="label" x="335" y="340">student_risk_factors</text>
+
+      <rect class="box box-csv" x="470" y="310" width="170" height="50" rx="8"></rect>
+      <text class="label" x="555" y="340">student_interventions</text>
+
+      <rect class="box box-csv" x="470" y="220" width="160" height="50" rx="8"></rect>
+      <text class="label" x="550" y="250">course_policy_links</text>
+
+      <rect class="box" x="300" y="400" width="240" height="60" rx="8"></rect>
+      <text class="label" x="420" y="425">student_risk_summary</text>
+      <text class="label-small" x="420" y="445">view (rules from policy_rules at build)</text>
+
+      <text class="label-small" x="300" y="120">policy_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M335 155 L400 86"></path>
+
+      <text class="label-small" x="500" y="120">policy_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M520 130 L440 86"></path>
+      <text class="label-small" x="700" y="120">intervention_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M670 130 L705 86"></path>
+
+      <text class="label-small" x="175" y="205">student_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M120 175 L250 245"></path>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M120 175 L250 335"></path>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M120 175 L470 335"></path>
+
+      <text class="label-small" x="430" y="205">recommended_intervention_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M400 245 L660 86"></path>
+
+      <text class="label-small" x="555" y="205">intervention_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M555 310 L705 86"></path>
+
+      <text class="label-small" x="175" y="295">course_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M150 325 L470 245"></path>
+      <text class="label-small" x="500" y="295">policy_id</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M550 220 L440 86"></path>
+
+      <text class="label-small" x="180" y="395">build-time</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M100 86 L360 400" stroke-dasharray="6 4"></path>
+      <text class="label-small" x="200" y="385">metrics from students/fees/assessments</text>
+      <path class="arrow" marker-end="url(#arrowhead-pol)" d="M90 200 L360 400" stroke-dasharray="6 4"></path>
+    </svg>
+    <p>
+      Solid arrows are SQLite foreign keys. The dashed arrow shows that
+      <code>policy_rules</code> is not joined at query time; it is consumed when
+      <code>build_student_db.py</code> generates the <code>student_risk_summary</code> view.
+      <code>risk_factor</code> in link tables is descriptive text and does not yet reference a master risk-factor table.
+    </p>
+  </div>
+
+  <h3>3.4 Table columns</h3>
+  <table>
+    <thead>
+      <tr><th>Table</th><th>Key columns</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>students</code></td>
+        <td><code>student_id</code>, <code>first_name</code>, <code>last_name</code>, <code>program</code>, <code>year_level</code>, <code>advisor</code>, <code>email</code></td>
+      </tr>
+      <tr>
+        <td><code>courses</code></td>
+        <td><code>course_id</code>, <code>course_name</code>, <code>department</code>, <code>credits</code>, <code>instructor</code>, <code>description</code></td>
+      </tr>
+      <tr>
+        <td><code>enrollments</code></td>
+        <td><code>enrollment_id</code>, <code>student_id</code>, <code>course_id</code>, <code>term</code>, <code>status</code></td>
+      </tr>
+      <tr>
+        <td><code>attendance</code></td>
+        <td><code>attendance_id</code>, <code>student_id</code>, <code>course_id</code>, <code>term</code>, <code>month</code>, <code>sessions_held</code>, <code>sessions_attended</code></td>
+      </tr>
+      <tr>
+        <td><code>assessments</code></td>
+        <td><code>assessment_id</code>, <code>student_id</code>, <code>course_id</code>, <code>term</code>, <code>assessment_name</code>, <code>score</code>, <code>max_score</code>, <code>weight</code></td>
+      </tr>
+      <tr>
+        <td><code>fees</code></td>
+        <td><code>fee_id</code>, <code>student_id</code>, <code>term</code>, <code>total_due</code>, <code>amount_paid</code>, <code>due_date</code>, <code>status</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.5 Policy table columns</h3>
+  <table>
+    <thead>
+      <tr><th>Table</th><th>Key columns</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>policy_rules</code></td>
+        <td><code>rule_id</code>, <code>category</code>, <code>metric</code>, <code>operator</code>, <code>threshold_value</code>, <code>term</code>, <code>active</code>, <code>reason_label</code></td>
+      </tr>
+      <tr>
+        <td><code>policies</code></td>
+        <td><code>policy_id</code>, <code>policy_name</code>, <code>summary</code>, <code>source_section</code></td>
+      </tr>
+      <tr>
+        <td><code>interventions</code></td>
+        <td><code>intervention_id</code>, <code>intervention_name</code>, <code>description</code></td>
+      </tr>
+      <tr>
+        <td><code>risk_policy_links</code></td>
+        <td><code>risk_factor</code>, <code>policy_id</code>, <code>evidence_text</code>, <code>source_file</code></td>
+      </tr>
+      <tr>
+        <td><code>policy_intervention_links</code></td>
+        <td><code>policy_id</code>, <code>intervention_id</code>, <code>evidence_text</code>, <code>source_file</code></td>
+      </tr>
+      <tr>
+        <td><code>advising_notes</code></td>
+        <td><code>note_id</code>, <code>student_id</code>, <code>term</code>, <code>note_text</code>, <code>recommended_intervention_id</code></td>
+      </tr>
+      <tr>
+        <td><code>student_risk_factors</code></td>
+        <td><code>student_id</code>, <code>term</code>, <code>risk_factor</code>, <code>evidence_text</code>, <code>source_file</code></td>
+      </tr>
+      <tr>
+        <td><code>student_interventions</code></td>
+        <td><code>student_id</code>, <code>term</code>, <code>intervention_id</code>, <code>evidence_text</code>, <code>source_file</code></td>
+      </tr>
+      <tr>
+        <td><code>course_policy_links</code></td>
+        <td><code>course_id</code>, <code>policy_id</code>, <code>evidence_text</code>, <code>source_file</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.6 Analytical views</h3>
+  <table>
+    <thead>
+      <tr><th>View</th><th>Built from</th><th>Used for</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>assessment_scores</code></td>
+        <td><code>assessments</code>, <code>students</code>, <code>courses</code></td>
+        <td>Weighted course scores per student</td>
+      </tr>
+      <tr>
+        <td><code>attendance_summary</code></td>
+        <td><code>attendance</code></td>
+        <td>Attendance percentage by student, course, term</td>
+      </tr>
+      <tr>
+        <td><code>fee_summary</code></td>
+        <td><code>fees</code></td>
+        <td>Balance due and fee status</td>
+      </tr>
+      <tr>
+        <td><code>student_risk_summary</code></td>
+        <td>grade/attendance/fee rollups + <code>policy_rules.csv</code></td>
+        <td>Risk level, reasons, scholarship candidate flag</td>
+      </tr>
+      <tr>
+        <td><code>course_performance_summary</code></td>
+        <td>enrollments + scores + attendance</td>
+        <td>Course-level performance analytics</td>
+      </tr>
+      <tr>
+        <td><code>attendance_trend</code></td>
+        <td><code>attendance</code></td>
+        <td>Monthly attendance trend charts</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Policy Rules Engine</h2>
+  <p>
+  <code>student_rag.data.policy_loader</code> reads <code>policy_rules.csv</code> and generates SQL for
+  <code>student_risk_summary</code> when <code>build_student_db.py</code> runs.
+  </p>
+  <table>
+    <thead>
+      <tr><th>category</th><th>metrics</th><th>SQL logic</th><th>output</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>risk_high</code></td>
+        <td><code>avg_score</code>, <code>attendance_pct</code>, <code>balance_due</code></td>
+        <td>Any matching rule triggers OR conditions</td>
+        <td><code>risk_level = 'high'</code></td>
+      </tr>
+      <tr>
+        <td><code>risk_medium</code></td>
+        <td><code>avg_score</code>, <code>attendance_pct</code>, <code>balance_due</code></td>
+        <td>Any matching rule triggers OR conditions if not already high</td>
+        <td><code>risk_level = 'medium'</code></td>
+      </tr>
+      <tr>
+        <td><code>scholarship</code></td>
+        <td><code>avg_score</code>, <code>attendance_pct</code>, <code>balance_due</code></td>
+        <td>All active scholarship rules must match (AND)</td>
+        <td><code>scholarship_candidate = 1</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>4.1 Current active rules (2026-Spring)</h3>
+  <table>
+    <thead>
+      <tr><th>rule_id</th><th>category</th><th>rule</th><th>reason_label</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>R001</td><td>risk_high</td><td>avg_score &lt; 70</td><td>low grades</td></tr>
+      <tr><td>R002</td><td>risk_high</td><td>attendance_pct &lt; 75</td><td>low attendance</td></tr>
+      <tr><td>R003</td><td>risk_high</td><td>balance_due &gt; 500</td><td>large fee balance</td></tr>
+      <tr><td>R004</td><td>risk_medium</td><td>avg_score &lt; 80</td><td></td></tr>
+      <tr><td>R005</td><td>risk_medium</td><td>attendance_pct &lt; 85</td><td></td></tr>
+      <tr><td>R006</td><td>risk_medium</td><td>balance_due &gt; 0</td><td></td></tr>
+      <tr><td>R007</td><td>scholarship</td><td>avg_score &gt;= 85</td><td></td></tr>
+      <tr><td>R008</td><td>scholarship</td><td>attendance_pct &gt;= 85</td><td></td></tr>
+      <tr><td>R009</td><td>scholarship</td><td>balance_due &lt;= 0</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Neo4j Knowledge Graph Model</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 960 300" role="img" aria-label="Neo4j graph model diagram">
+      <rect class="box box-neo4j" x="60" y="110" width="120" height="50" rx="8"></rect>
+      <text class="label" x="120" y="140">Student</text>
+
+      <rect class="box box-neo4j" x="240" y="40" width="120" height="50" rx="8"></rect>
+      <text class="label" x="300" y="70">RiskFactor</text>
+
+      <rect class="box box-neo4j" x="240" y="180" width="120" height="50" rx="8"></rect>
+      <text class="label" x="300" y="210">Course</text>
+
+      <rect class="box box-neo4j" x="430" y="40" width="120" height="50" rx="8"></rect>
+      <text class="label" x="490" y="70">Policy</text>
+
+      <rect class="box box-neo4j" x="620" y="40" width="130" height="50" rx="8"></rect>
+      <text class="label" x="685" y="70">Intervention</text>
+
+      <rect class="box box-neo4j" x="430" y="180" width="120" height="50" rx="8"></rect>
+      <text class="label" x="490" y="210">Advisor</text>
+
+      <rect class="box box-neo4j" x="620" y="180" width="120" height="50" rx="8"></rect>
+      <text class="label" x="680" y="210">Program</text>
+
+      <text class="label-small" x="180" y="108">HAS_RISK_FACTOR</text>
+      <path class="arrow" d="M180 125 L240 65"></path>
+
+      <text class="label-small" x="370" y="48">TRIGGERS_POLICY</text>
+      <path class="arrow" d="M360 65 L430 65"></path>
+
+      <text class="label-small" x="555" y="48">RECOMMENDS_INTERVENTION</text>
+      <path class="arrow" d="M550 65 L620 65"></path>
+
+      <text class="label-small" x="180" y="205">ENROLLED_IN</text>
+      <path class="arrow" d="M180 140 L240 205"></path>
+
+      <text class="label-small" x="180" y="250">ADVISED_BY</text>
+      <path class="arrow" d="M180 150 L430 205"></path>
+
+      <text class="label-small" x="350" y="250">BELONGS_TO_PROGRAM</text>
+      <path class="arrow" d="M180 150 L620 205"></path>
+
+      <text class="label-small" x="370" y="225">MENTIONED_IN</text>
+      <path class="arrow" d="M360 205 L430 65"></path>
+    </svg>
+    <p>
+      Graph edges are loaded from CSV by <code>student_rag.kg.extraction</code>.
+      Relationship properties include <code>source_doc</code>, <code>evidence_text</code>,
+      <code>confidence</code>, and <code>term</code>.
+    </p>
+  </div>
+
+  <h3>5.1 CSV to Neo4j mapping</h3>
+  <table>
+    <thead>
+      <tr><th>CSV source</th><th>Relationship</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>risk_policy_links.csv</code></td>
+        <td>RiskFactor → TRIGGERS_POLICY → Policy</td>
+        <td>Irregular Attendance → Attendance Intervention Policy</td>
+      </tr>
+      <tr>
+        <td><code>policy_intervention_links.csv</code></td>
+        <td>Policy → RECOMMENDS_INTERVENTION → Intervention</td>
+        <td>Attendance Intervention Policy → Weekly Lab Attendance</td>
+      </tr>
+      <tr>
+        <td><code>student_risk_factors.csv</code></td>
+        <td>Student → HAS_RISK_FACTOR → RiskFactor</td>
+        <td>Noah Patel → Irregular Attendance</td>
+      </tr>
+      <tr>
+        <td><code>student_interventions.csv</code></td>
+        <td>Student → RECOMMENDS_INTERVENTION → Intervention</td>
+        <td>Noah Patel → Weekly Lab Attendance</td>
+      </tr>
+      <tr>
+        <td><code>student_course_context.csv</code></td>
+        <td>Student → ENROLLED_IN → Course</td>
+        <td>Carlos Reyes → C101</td>
+      </tr>
+      <tr>
+        <td><code>course_policy_links.csv</code></td>
+        <td>Course → MENTIONED_IN → Policy</td>
+        <td>C102 → Academic Risk Policy</td>
+      </tr>
+      <tr>
+        <td><code>students.csv</code></td>
+        <td>Student → ADVISED_BY / BELONGS_TO_PROGRAM</td>
+        <td>Noah Patel → Prof. Chen / Software Engineering</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Runtime Consumption</h2>
+  <table>
+    <thead>
+      <tr><th>Consumer</th><th>SQLite</th><th>Neo4j</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>student-agent</code> (deterministic CLI)</td>
+        <td><code>run_sql</code> on views when <code>needs_sql</code></td>
+        <td><code>get_graph_evidence</code> when <code>needs_graph</code></td>
+      </tr>
+      <tr>
+        <td><code>student-lmstudio-agent</code></td>
+        <td><code>run_sql</code> tool</td>
+        <td>graph tools via LM Studio tool loop</td>
+      </tr>
+      <tr>
+        <td>MCP server</td>
+        <td><code>run_sql</code>, <code>get_at_risk_students</code>, <code>analyze_*</code></td>
+        <td><code>get_policy_intervention_path</code>, <code>query_knowledge_graph</code>, etc.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>6.1 Responsibility split</h3>
+  <table>
+    <thead>
+      <tr><th>Question type</th><th>Store</th><th>Example</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>How is the student performing?</td>
+        <td>SQLite</td>
+        <td>avg_score 62, attendance 71%, balance 600</td>
+      </tr>
+      <tr>
+        <td>What risk level applies?</td>
+        <td>SQLite</td>
+        <td><code>risk_level = high</code> from <code>policy_rules</code></td>
+      </tr>
+      <tr>
+        <td>What policy and intervention apply?</td>
+        <td>Neo4j</td>
+        <td>Irregular Attendance → Attendance Policy → Weekly Lab Attendance</td>
+      </tr>
+      <tr>
+        <td>What did the advisor note?</td>
+        <td>SQLite <code>advising_notes</code> or Neo4j evidence</td>
+        <td>Commute issues affected March attendance</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. Policy Change Procedure</h2>
+  <ol>
+    <li>Edit the relevant CSV under <code>data/student_management/</code>.</li>
+    <li>Rebuild SQLite: <code>python scripts/build_student_db.py</code></li>
+    <li>Rebuild Neo4j: <code>python scripts/build_student_kg.py</code></li>
+    <li>Re-run agents or MCP tools against the refreshed stores.</li>
+  </ol>
+
+  <h3>7.1 Common change examples</h3>
+  <table>
+    <thead>
+      <tr><th>Change</th><th>Edit file</th><th>Rebuild</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Attendance high-risk threshold 75 → 70</td>
+        <td><code>policy_rules.csv</code> row R002</td>
+        <td>SQLite only</td>
+      </tr>
+      <tr>
+        <td>New intervention playbook item</td>
+        <td><code>interventions.csv</code>, <code>policy_intervention_links.csv</code></td>
+        <td>SQLite + Neo4j</td>
+      </tr>
+      <tr>
+        <td>Advisor note for a student</td>
+        <td><code>advising_notes.csv</code>, optional <code>student_risk_factors.csv</code></td>
+        <td>SQLite + Neo4j if graph links changed</td>
+      </tr>
+      <tr>
+        <td>New course description</td>
+        <td><code>courses.csv</code></td>
+        <td>SQLite; Neo4j only if graph links reference the course</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>8. Module Reference</h2>
+  <table>
+    <thead>
+      <tr><th>Module / script</th><th>Responsibility</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>scripts/build_student_db.py</code></td>
+        <td>Rebuild <code>student_management.sqlite</code></td>
+      </tr>
+      <tr>
+        <td><code>scripts/build_student_kg.py</code></td>
+        <td>Load graph facts into Neo4j</td>
+      </tr>
+      <tr>
+        <td><code>student_rag.data.db</code></td>
+        <td>Schema, CSV load, views, read-only SQL</td>
+      </tr>
+      <tr>
+        <td><code>student_rag.data.policy_loader</code></td>
+        <td>Read <code>policy_rules.csv</code>, generate risk view SQL</td>
+      </tr>
+      <tr>
+        <td><code>student_rag.kg.extraction</code></td>
+        <td>CSV → <code>GraphFact</code> list</td>
+      </tr>
+      <tr>
+        <td><code>student_rag.kg.neo4j_store</code></td>
+        <td>Neo4j load and read-only Cypher helpers</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 40px; color: #6b7280; font-size: 13px;">
+    Generated for the Student Management Agentic RAG sample.
+    See also <code>docs/DESIGN.md</code> and <code>docs/SQLITE_AGENTIC_RAG_PLAN.html</code>.
+  </p>
+</body>
+</html>

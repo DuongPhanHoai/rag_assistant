@@ -18,7 +18,7 @@ def main() -> None:
     parser.add_argument(
         "--use-llm",
         action="store_true",
-        help="Run an additional AutoSchemaKG-style LLM extraction pass over markdown docs.",
+        help="Run an additional AutoSchemaKG-style LLM extraction pass over policy CSV content.",
     )
     parser.add_argument(
         "--no-reset",
@@ -36,7 +36,7 @@ def main() -> None:
         f"Loaded {summary['loaded_facts']} graph facts into Neo4j "
         f"(reset={summary['reset']})."
     )
-    print(f"Sample source docs: {os.path.relpath(ROOT_DIR / 'data' / 'student_management' / 'docs', ROOT_DIR)}")
+    print(f"Policy CSV source dir: {os.path.relpath(ROOT_DIR / 'data' / 'student_management', ROOT_DIR)}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,10 @@
+rule_id,category,metric,operator,threshold_value,term,active,reason_label
+R001,risk_high,avg_score,<,70,2026-Spring,1,low grades
+R002,risk_high,attendance_pct,<,75,2026-Spring,1,low attendance
+R003,risk_high,balance_due,>,500,2026-Spring,1,large fee balance
+R004,risk_medium,avg_score,<,80,2026-Spring,1,
+R005,risk_medium,attendance_pct,<,85,2026-Spring,1,
+R006,risk_medium,balance_due,>,0,2026-Spring,1,
+R007,scholarship,avg_score,>=,85,2026-Spring,1,
+R008,scholarship,attendance_pct,>=,85,2026-Spring,1,
+R009,scholarship,balance_due,<=,0,2026-Spring,1,

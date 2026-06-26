@@ -125,11 +125,10 @@ student_management_agentic_rag/
   data/
     student_management/
       *.csv
-      docs/
   docs/
   eval/
   scripts/
-    build_student_kg.py          # planned AutoSchemaKG -> Neo4j builder
+    build_student_kg.py          # CSV -> Neo4j builder
   src/
     student_rag/
       paths.py
@@ -137,7 +136,8 @@ student_management_agentic_rag/
       llm.py
       data/
         db.py
-      kg/                        # planned Neo4j / AutoSchemaKG integration
+        policy_loader.py
+      kg/
         extraction.py
         neo4j_store.py
       agents/
@@ -164,15 +164,16 @@ Structured CSV files are stored under `data/student_management/`:
 - `assessments.csv`
 - `fees.csv`
 
-Unstructured Markdown documents are stored under `data/student_management/docs/`:
+Policy and advising content is stored as CSV under `data/student_management/`:
 
-- `advising_notes.md`
-- `policies.md`
-- `course_descriptions.md`
+- `policy_rules.csv` — numeric thresholds used to build `student_risk_summary`
+- `policies.csv`, `interventions.csv`, `risk_policy_links.csv`, `policy_intervention_links.csv`
+- `advising_notes.csv`, `student_risk_factors.csv`, `student_interventions.csv`
+- `courses.csv` includes a `description` column for course context
 
 ### SQLite ELT
 
-`student_rag.data.db` contains the SQLite schema, ELT build function, schema summary, and safe read-only SQL execution. `scripts/build_student_db.py` is a thin command wrapper that rebuilds `student_management.sqlite`.
+`student_rag.data.db` contains the SQLite schema, ELT build function, schema summary, and safe read-only SQL execution. `student_rag.data.policy_loader` reads `policy_rules.csv` and generates the `student_risk_summary` view SQL at build time. `scripts/build_student_db.py` is a thin command wrapper that rebuilds `student_management.sqlite`.
 
 The raw tables stay normalized. The script also creates analytical views that make agent-generated SQL simpler:
 
@@ -185,18 +186,19 @@ The raw tables stay normalized. The script also creates analytical views that ma
 
 `get_schema_summary()` includes value hints that are important for local models:
 
-- `student_risk_summary.risk_level` uses text values: `high`, `medium`, `low`.
+- `student_risk_summary.risk_level` thresholds come from `policy_rules.csv` at database build time.
 - `student_risk_summary.scholarship_candidate` uses integer values: `1` means yes, `0` means no.
 - `student_risk_summary.term` uses values such as `2026-Spring`; there is no `current_term` value.
 - `fee_summary.status` uses text values: `paid`, `partial`, `overdue`.
 
 ### AutoSchemaKG + Neo4j Knowledge Graph
 
-AutoSchemaKG should extract graph facts from `data/student_management/docs/` and load them into Neo4j. The first version should process:
+Graph facts are loaded from CSV files in `data/student_management/` and written to Neo4j by `scripts/build_student_kg.py`. Primary inputs:
 
-- `policies.md`
-- `advising_notes.md`
-- `course_descriptions.md`
+- `policy_rules.csv`, `policies.csv`, `interventions.csv`
+- `risk_policy_links.csv`, `policy_intervention_links.csv`
+- `advising_notes.csv`, `student_risk_factors.csv`, `student_interventions.csv`
+- `courses.csv`, `student_course_context.csv`, `course_policy_links.csv`
 
 Recommended graph model:
 
@@ -213,8 +215,9 @@ Example extracted facts:
 
 Planned modules:
 
-- `scripts/build_student_kg.py`: runs AutoSchemaKG over Markdown docs and loads Neo4j.
-- `student_rag.kg.extraction`: wraps AutoSchemaKG extraction prompts/config.
+- `scripts/build_student_kg.py`: loads graph facts from policy CSV files into Neo4j.
+- `student_rag.kg.extraction`: builds graph facts from CSV seed files.
+- `student_rag.data.policy_loader`: reads `policy_rules.csv` and generates risk view SQL.
 - `student_rag.kg.neo4j_store`: creates constraints, loads nodes/edges, and runs read-only Cypher queries.
 
 Planned Neo4j constraints:

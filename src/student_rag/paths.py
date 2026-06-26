@@ -8,7 +8,6 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
 
 DATA_DIR = ROOT_DIR / "data" / "student_management"
-DOCS_DIR = DATA_DIR / "docs"
 DB_PATH = ROOT_DIR / "student_management.sqlite"
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")

@@ -164,7 +164,7 @@ Rules:
 - Use get_schema_summary before writing SQL unless the needed view is already obvious.
 - Use run_sql for structured facts, counts, averages, risk levels, fees, grades, and attendance.
 - Use Neo4j graph tools for policies, intervention paths, risk factors, and relationship evidence.
-- The Neo4j graph is built offline from markdown docs using AutoSchemaKG.
+- The Neo4j graph is built offline from policy CSV files using AutoSchemaKG.
 - Use generate_artifact after run_sql when the user asks for a table, chart, graph, or trend.
 - Never invent data. If evidence is missing, say what is missing.
 - Keep final answers concise and include practical next actions for risk or intervention questions.

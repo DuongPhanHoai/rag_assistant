@@ -1,6 +1,6 @@
-course_id,course_name,department,credits,instructor
-C101,Database Fundamentals,Information Systems,3,Prof. Chen
-C102,Python for Analytics,Data Analytics,3,Dr. Santos
-C103,Statistics for Business,Business Analytics,4,Dr. Rivera
-C104,Software Project Studio,Software Engineering,4,Prof. Malik
-C105,Responsible AI Foundations,Data Analytics,2,Dr. Rivera
+course_id,course_name,department,credits,instructor,description
+C101,Database Fundamentals,Information Systems,3,Prof. Chen,"Introduces relational modeling, SQL querying, normalization, and database-backed application patterns."
+C102,Python for Analytics,Data Analytics,3,Dr. Santos,"Covers Python data structures, data cleaning, notebook workflows, and simple analytics automation."
+C103,Statistics for Business,Business Analytics,4,Dr. Rivera,"Focuses on descriptive statistics, probability, hypothesis testing, and communicating analytical findings."
+C104,Software Project Studio,Software Engineering,4,Prof. Malik,"Students work in teams to deliver a small software product using agile practices, version control, demos, and peer review."
+C105,Responsible AI Foundations,Data Analytics,2,Dr. Rivera,"Introduces fairness, transparency, AI governance, and responsible deployment practices."

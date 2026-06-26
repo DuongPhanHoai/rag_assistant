@@ -3,7 +3,7 @@
 A small local sample for answering Student Management questions with:
 
 - SQLite structured data for students, courses, enrollments, attendance, assessments, and fees.
-- Neo4j knowledge graph facts extracted from policies and advising notes (AutoSchemaKG-style pipeline).
+- Neo4j knowledge graph facts loaded from policy and advising CSV files (AutoSchemaKG-style pipeline).
 - An agentic workflow that plans, decomposes the request, runs read-only SQL, queries graph context, produces a table or Vega-Lite chart spec, replans if needed, and answers.
 
 The project uses LM Studio's OpenAI-compatible local chat API, Neo4j, and Python's built-in SQLite support.
@@ -22,10 +22,16 @@ student_management_agentic_rag/
       attendance.csv
       assessments.csv
       fees.csv
-      docs/
-        advising_notes.md
-        policies.md
-        course_descriptions.md
+      policy_rules.csv
+      policies.csv
+      interventions.csv
+      risk_policy_links.csv
+      policy_intervention_links.csv
+      advising_notes.csv
+      student_risk_factors.csv
+      student_interventions.csv
+      student_course_context.csv
+      course_policy_links.csv
   eval/
     student_questions.json
   scripts/
@@ -40,6 +46,7 @@ student_management_agentic_rag/
       data/
         __init__.py
         db.py
+        policy_loader.py
       kg/
         extraction.py
         neo4j_store.py
@@ -137,6 +144,8 @@ LMSTUDIO_TIMEOUT_SECONDS=30
 ```
 
 Use `student_rag.agents.deterministic` for the deterministic workflow with fallback planning. Use `student_rag.agents.lmstudio` when you want LM Studio to choose and call tools directly through the OpenAI-compatible tool-calling API.
+
+For the full data layer (CSV catalog, SQLite model, Neo4j graph, policy rules), see `docs/DATA_DESIGN.html`.
 
 For detailed setup, tool behavior, and troubleshooting, see `docs/LMSTUDIO_CHAT_AGENT_GUIDE.md`.
 

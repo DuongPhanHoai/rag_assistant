@@ -21,7 +21,7 @@ python scripts/build_student_db.py
 python scripts/build_student_kg.py
 ```
 
-MCP reads SQLite and Neo4j graph tools when the knowledge graph is built.
+MCP reads SQLite and Neo4j graph tools when the knowledge graph is built. Policy thresholds and intervention rules come from `data/student_management/*.csv`; edit those CSV files and rerun both build scripts after policy changes.
 
 ## 2. MCP Server Command
 

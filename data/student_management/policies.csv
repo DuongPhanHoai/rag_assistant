@@ -1,0 +1,6 @@
+policy_id,policy_name,summary,source_section
+P001,Academic Risk Policy,"A student should be flagged for academic risk when the weighted average score is below 70, attendance is below 75 percent, or the student has two or more failed or borderline course indicators.",academic_risk
+P002,Attendance Intervention Policy,Students are expected to attend at least 80 percent of scheduled sessions. Attendance below 75 percent requires advisor follow-up.,attendance
+P003,Scholarship Support Policy,"Scholarship support is prioritized for students with a weighted average score of at least 85, attendance of at least 85 percent, and no overdue fee balance.",scholarship
+P004,Financial Hold Policy,Students with overdue balances above 500 should meet financial aid before registration opens.,financial
+P005,Intervention Playbook,High-risk students should receive a coordinated plan that includes both academic and non-academic blockers.,intervention

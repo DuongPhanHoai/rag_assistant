@@ -1,0 +1,9 @@
+note_id,student_id,term,note_text,recommended_intervention_id
+N001,S001,2026-Spring,Maya is performing strongly in Python for Analytics and Database Fundamentals. She has asked for more advanced analytics project work and is a good candidate for peer tutoring.,I004
+N002,S002,2026-Spring,Noah understands software design concepts but his Database Fundamentals project score has slipped. His advisor noted that commute issues affected March attendance and recommended a catch-up plan with weekly lab attendance.,I001
+N003,S003,2026-Spring,Lina is a first-year student adjusting to the workload. She is motivated in Responsible AI Foundations but needs statistics practice and should attend the quantitative skills workshop.,
+N004,S004,2026-Spring,Owen is at high academic risk. Advising notes mention missed labs late project work and a large unpaid fee balance. The intervention team recommended a meeting with the advisor financial aid and the Software Project Studio instructor.,I003
+N005,S005,2026-Spring,Aisha is graduating soon and remains one of the strongest students in the cohort. She has no advising concerns and is preparing a capstone presentation on data quality.,
+N006,S006,2026-Spring,Minh is steady in Python and Responsible AI but has borderline statistics performance. The advisor suggested study-group participation before the next assessment.,I005
+N007,S007,2026-Spring,Emma has good attendance and solid grades. Her project team noted strong communication skills and she may be suitable for a student mentor role.,
+N008,S008,2026-Spring,Carlos is at high risk in both Database Fundamentals and Python for Analytics. Notes mention irregular attendance overdue fees and difficulty completing programming labs without guided practice.,I001

@@ -1,0 +1,3 @@
+risk_factor,policy_id,evidence_text,source_file
+Irregular Attendance,P002,Attendance below 75 percent requires advisor follow-up.,policies.csv
+Balance Due Greater Than 500,P004,Students with overdue balances above 500 should meet financial aid before registration opens.,policies.csv
