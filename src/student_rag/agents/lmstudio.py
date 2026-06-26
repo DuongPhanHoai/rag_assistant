@@ -6,8 +6,13 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from student_rag.agents.deterministic import answer_student_question
 from student_rag.artifacts import generate_table_or_chart_spec
 from student_rag.data.db import get_schema_summary, run_sql
+from student_rag.kg.neo4j_store import (
+    get_policy_intervention_path,
+    get_related_risk_factors,
+    get_student_graph_context,
+    query_knowledge_graph,
+)
 from student_rag.llm import get_llm
-from student_rag.data.retrieval import retrieve_notes
 
 
 MAX_AGENT_ROUNDS = 6
@@ -50,22 +55,74 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "retrieve_notes",
-            "description": "Search advising notes, policies, and course descriptions using vector retrieval.",
+            "name": "get_student_graph_context",
+            "description": (
+                "Return Neo4j graph context for one student from the AutoSchemaKG-built knowledge graph."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
+                    "student_name": {
                         "type": "string",
-                        "description": "Search query for advising notes, policies, and course descriptions.",
-                    },
-                    "k": {
-                        "type": "integer",
-                        "description": "Maximum number of chunks to retrieve.",
-                        "default": 4,
-                    },
+                        "description": "Full student name, for example Carlos Reyes.",
+                    }
                 },
-                "required": ["query"],
+                "required": ["student_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_policy_intervention_path",
+            "description": (
+                "Return policy and intervention paths for a student based on risk factors in Neo4j."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "student_name": {
+                        "type": "string",
+                        "description": "Full student name, for example Owen Smith.",
+                    }
+                },
+                "required": ["student_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_related_risk_factors",
+            "description": "Return risk factors linked to a student in the Neo4j knowledge graph.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "student_name": {
+                        "type": "string",
+                        "description": "Full student name.",
+                    }
+                },
+                "required": ["student_name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_knowledge_graph",
+            "description": (
+                "Run one read-only Cypher query against the Neo4j knowledge graph populated by AutoSchemaKG."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cypher": {
+                        "type": "string",
+                        "description": "A read-only Cypher query using MATCH/RETURN.",
+                    }
+                },
+                "required": ["cypher"],
             },
         },
     },
@@ -99,12 +156,13 @@ TOOLS = [
 SYSTEM_PROMPT = """You are a Student Management analytics agent.
 
 Use the provided tools to answer questions about students, courses, attendance, assessments, fees,
-advising notes, course descriptions, and policies.
+policies, interventions, and advising context.
 
 Rules:
 - Use get_schema_summary before writing SQL unless the needed view is already obvious.
 - Use run_sql for structured facts, counts, averages, risk levels, fees, grades, and attendance.
-- Use retrieve_notes for policies, advising context, explanations, or intervention recommendations.
+- Use Neo4j graph tools for policies, intervention paths, risk factors, and relationship evidence.
+- The Neo4j graph is built offline from markdown docs using AutoSchemaKG.
 - Use generate_artifact after run_sql when the user asks for a table, chart, graph, or trend.
 - Never invent data. If evidence is missing, say what is missing.
 - Keep final answers concise and include practical next actions for risk or intervention questions.
@@ -123,6 +181,17 @@ def _tool_args(tool_call: dict[str, Any]) -> dict[str, Any]:
     return args or {}
 
 
+def _graph_sources(graph_results: list[dict[str, Any]]) -> list[str]:
+    sources: set[str] = set()
+    for result in graph_results:
+        for key in ("context", "paths", "risk_factors", "rows", "matches"):
+            for row in result.get(key, []) or []:
+                source_doc = row.get("source_doc")
+                if source_doc:
+                    sources.add(source_doc)
+    return sorted(sources)
+
+
 def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS) -> dict[str, Any]:
     """Run LM Studio's OpenAI-compatible tool-calling loop over student tools."""
     messages = [
@@ -131,7 +200,7 @@ def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS
     ]
 
     sql_results: list[dict[str, Any]] = []
-    retrieved_notes: list[dict[str, Any]] = []
+    graph_results: list[dict[str, Any]] = []
     artifact: dict[str, Any] | None = None
     transcript: list[dict[str, Any]] = []
 
@@ -147,9 +216,9 @@ def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS
                     "question": question,
                     "answer": response.content,
                     "sql_results": sql_results,
-                    "retrieved_notes": retrieved_notes,
+                    "graph_results": graph_results,
                     "artifact": artifact,
-                    "sources": sorted({note["source"] for note in retrieved_notes if note.get("source")}),
+                    "sources": _graph_sources(graph_results),
                     "transcript": transcript,
                     "mode": "lmstudio_tools",
                 }
@@ -164,9 +233,18 @@ def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS
                 elif name == "run_sql":
                     result = run_sql(args["sql"])
                     sql_results.append(result)
-                elif name == "retrieve_notes":
-                    result = retrieve_notes(args["query"], k=int(args.get("k", 4)))
-                    retrieved_notes.extend(result)
+                elif name == "get_student_graph_context":
+                    result = get_student_graph_context(args["student_name"])
+                    graph_results.append(result)
+                elif name == "get_policy_intervention_path":
+                    result = get_policy_intervention_path(args["student_name"])
+                    graph_results.append(result)
+                elif name == "get_related_risk_factors":
+                    result = get_related_risk_factors(args["student_name"])
+                    graph_results.append(result)
+                elif name == "query_knowledge_graph":
+                    result = query_knowledge_graph(args["cypher"])
+                    graph_results.append(result)
                 elif name == "generate_artifact":
                     latest_sql = sql_results[-1] if sql_results else {"rows": [], "columns": []}
                     result = generate_table_or_chart_spec(

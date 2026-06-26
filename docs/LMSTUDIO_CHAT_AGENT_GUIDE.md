@@ -48,10 +48,18 @@ Build SQLite:
 python scripts/build_student_db.py
 ```
 
-Build Chroma embeddings only if you also use the Python agents (`student-agent`, `student-lmstudio-agent`). MCP reads `student_management.sqlite` only.
+Build the Neo4j knowledge graph for graph tools:
 
 ```powershell
-python scripts/build_student_vectors.py
+python scripts/build_student_kg.py
+```
+
+Set Neo4j in `.env`:
+
+```env
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
 ```
 
 ## 4. Configure LM Studio Chat MCP
@@ -326,13 +334,15 @@ This can happen with thinking models. Try:
 - Use a non-thinking Qwen instruct/coder model.
 - Keep prompts direct and avoid asking about tool-call syntax.
 
-### Chroma Or Embedding Errors
+### Neo4j Unavailable
 
-These apply to the Python agents only (`student-agent`, `student-lmstudio-agent`), not to MCP chat.
+Start Neo4j and rebuild the graph:
 
 ```powershell
-python scripts/build_student_vectors.py
+python scripts/build_student_kg.py
 ```
+
+Default Bolt port is `7687`. Connection refused on localhost usually means Neo4j is not running yet, not a Windows Firewall issue.
 
 ### SQLite Errors
 

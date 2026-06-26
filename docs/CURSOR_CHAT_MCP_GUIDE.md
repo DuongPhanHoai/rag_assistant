@@ -18,9 +18,10 @@ From the project root:
 cd D:\rag_assistant
 pip install -r requirements.txt
 python scripts/build_student_db.py
+python scripts/build_student_kg.py
 ```
 
-`build_student_vectors.py` is only needed for the Python agents (`student-agent`, `student-lmstudio-agent`). MCP reads `student_management.sqlite` only.
+MCP reads SQLite and Neo4j graph tools when the knowledge graph is built.
 
 ## 2. MCP Server Command
 
@@ -70,7 +71,7 @@ After saving the MCP config, reload MCP tools in Cursor if needed.
 
 ## 4. Tools Available In Cursor Chat
 
-The MCP server reads structured data from SQLite only:
+The MCP server reads structured data from SQLite and Neo4j:
 
 - `ask_student_management`
 - `get_schema_summary`
@@ -79,6 +80,10 @@ The MCP server reads structured data from SQLite only:
 - `analyze_at_risk_students`
 - `get_scholarship_candidates`
 - `analyze_scholarship_candidates`
+- `get_student_graph_context`
+- `get_policy_intervention_path`
+- `get_related_risk_factors`
+- `query_knowledge_graph`
 - `generate_artifact`
 
 Use `ask_student_management` for normal chat questions. Prefer the `analyze_*` tools when you want metric interpretation guidance included with the SQL rows.
@@ -103,10 +108,10 @@ Direct SQL check:
 Using the student-management-rag tools, inspect the schema and query student_risk_summary for high-risk students.
 ```
 
-Policy retrieval:
+Policy and intervention context:
 
 ```text
-Using the student-management-rag tools, retrieve notes about scholarship policy and summarize the eligibility criteria.
+Using the student-management-rag tools, get policy and intervention paths for Carlos Reyes from the knowledge graph.
 ```
 
 ## 6. Answer Quality Checks

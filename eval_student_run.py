@@ -40,6 +40,7 @@ def run_eval():
                 "plan": res["plan"],
                 "sql": (res["sql_result"] or {}).get("sql"),
                 "artifact_type": res["artifact"]["type"],
+                "graph_match_count": (res.get("graph_context") or {}).get("row_count", 0),
                 "sources": res["sources"],
             }
             f_out.write(json.dumps(record, ensure_ascii=False) + "\n")

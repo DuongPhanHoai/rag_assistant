@@ -5,17 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "student-management-agentic-rag"
 version = "0.1.0"
-description = "Local SQLite and Chroma agentic RAG sample for Student Management data."
+description = "Local SQLite and Neo4j agentic RAG sample for Student Management data."
 requires-python = ">=3.11"
 dependencies = [
     "langchain",
-    "langchain-community",
     "langchain-openai",
-    "langchain-text-splitters",
-    "chromadb",
     "mcp",
+    "neo4j",
     "python-dotenv",
-    "sentence-transformers",
 ]
 
 [project.scripts]

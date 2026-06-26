@@ -175,10 +175,10 @@
 
   <h2>Implementation Plan</h2>
   <ol>
-    <li>Add a small sample dataset under <code>data/student_management/</code> with CSV seed files and text or Markdown notes and policies for embedding retrieval.</li>
+    <li>Add a small sample dataset under <code>data/student_management/</code> with CSV seed files and Markdown notes and policies for AutoSchemaKG graph extraction.</li>
     <li>Add <code>scripts/build_student_db.py</code> to create <code>student_management.sqlite</code> from the seed files using Python <code>sqlite3</code>, including useful views such as <code>student_risk_summary</code>.</li>
     <li>Add <code>scripts/build_student_kg.py</code> to run AutoSchemaKG over Markdown docs and load extracted entities, events, and relationships into Neo4j.</li>
-    <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, retrieval, artifacts, LM Studio configuration, and paths.</li>
+    <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, Neo4j graph integration, artifacts, LM Studio configuration, and paths.</li>
     <li>Add a planned <code>student_rag.kg</code> package for AutoSchemaKG extraction and Neo4j read-only Cypher queries.</li>
     <li>Add <code>student_rag.agents.deterministic</code> with tools for <code>plan_question</code>, <code>run_sql</code>, graph context, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
     <li>Add <code>student_rag.mcp.server</code> so Cursor and LM Studio Chat can call SQLite-backed and planned Neo4j-backed Student Management tools through MCP.</li>

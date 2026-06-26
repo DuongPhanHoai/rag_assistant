@@ -137,7 +137,6 @@ student_management_agentic_rag/
       llm.py
       data/
         db.py
-        retrieval.py
       kg/                        # planned Neo4j / AutoSchemaKG integration
         extraction.py
         neo4j_store.py

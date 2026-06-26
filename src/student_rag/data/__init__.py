@@ -1,1 +1,1 @@
-"""Data manipulation: SQLite ELT/queries and Chroma vector retrieval."""
+"""Data manipulation: SQLite ELT and read-only queries."""

@@ -49,18 +49,25 @@ Build the SQLite database:
 python scripts/build_student_db.py
 ```
 
-Build the Chroma vector store:
+Build the Neo4j knowledge graph:
 
 ```powershell
-python scripts/build_student_vectors.py
+python scripts/build_student_kg.py
+```
+
+Set Neo4j connection values in `.env` before building:
+
+```env
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
 ```
 
 Generated outputs:
 
 - `student_management.sqlite`
-- `chroma_student_db/`
 
-Both are ignored by git.
+The SQLite file is ignored by git.
 
 ## 4. Run The Deterministic Agent
 
@@ -104,7 +111,7 @@ Create a chart of attendance trend by month for at-risk students.
 
 ## 6. Run The MCP Server For LM Studio Chat
 
-Use this when you want to type questions directly inside LM Studio Chat. MCP reads `student_management.sqlite` only.
+Use this when you want to type questions directly inside LM Studio Chat. MCP reads SQLite and Neo4j graph tools when the knowledge graph is built.
 
 Prerequisite:
 
@@ -173,7 +180,7 @@ This file is ignored by git.
 Check Python compilation:
 
 ```powershell
-python -m py_compile src/student_rag/*.py src/student_rag/data/*.py src/student_rag/agents/*.py src/student_rag/mcp/*.py eval_student_run.py scripts/build_student_db.py scripts/build_student_vectors.py
+python -m py_compile src/student_rag/*.py src/student_rag/data/*.py src/student_rag/kg/*.py src/student_rag/agents/*.py src/student_rag/mcp/*.py eval_student_run.py scripts/build_student_db.py scripts/build_student_kg.py
 ```
 
 Check the risk summary directly:
@@ -219,13 +226,15 @@ Increase timeout in `.env`:
 LMSTUDIO_TIMEOUT_SECONDS=60
 ```
 
-### Chroma Or Embedding Error
+### Neo4j Unavailable
 
-Rebuild vectors:
+Start Neo4j and rebuild the graph:
 
 ```powershell
-python scripts/build_student_vectors.py
+python scripts/build_student_kg.py
 ```
+
+Default Bolt port is `7687`, not `7685`. For local use on the same machine, you usually do not need a Windows Firewall rule; connection refused usually means Neo4j is not running yet.
 
 ### SQLite Data Looks Wrong
 

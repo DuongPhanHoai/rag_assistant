@@ -1,7 +1,6 @@
 __pycache__/
 *.egg-info/
 /.idea/
-/chroma_student_db/
 /eval/student_results.jsonl
 /student_management.sqlite
 /.cursor/

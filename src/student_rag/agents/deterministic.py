@@ -4,8 +4,13 @@ from typing import Any
 
 from student_rag.artifacts import generate_table_or_chart_spec, markdown_table
 from student_rag.data.db import get_schema_summary, run_sql
+from student_rag.kg.neo4j_store import (
+    Neo4jUnavailableError,
+    get_policy_intervention_path,
+    get_related_risk_factors,
+    search_graph_context,
+)
 from student_rag.llm import get_llm
-from student_rag.data.retrieval import retrieve_notes
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -59,6 +64,25 @@ def _heuristic_sql(question: str) -> str:
     """
 
 
+def _needs_graph_heuristic(question: str) -> bool:
+    q = question.lower()
+    return any(
+        word in q
+        for word in [
+            "policy",
+            "policies",
+            "intervention",
+            "advising",
+            "why",
+            "explain",
+            "risk factor",
+            "recommend",
+            "support",
+            "scholarship",
+        ]
+    )
+
+
 def _fallback_plan(question: str) -> dict[str, Any]:
     q = question.lower()
     needs_chart = any(word in q for word in ["chart", "trend", "plot", "graph"])
@@ -66,9 +90,9 @@ def _fallback_plan(question: str) -> dict[str, Any]:
         "question": question,
         "reasoning": "Fallback plan based on keywords.",
         "needs_sql": True,
-        "needs_vector": True,
+        "needs_graph": _needs_graph_heuristic(question),
         "needs_chart": needs_chart,
-        "search_query": question,
+        "graph_query": question,
         "sql": _heuristic_sql(question),
     }
 
@@ -76,14 +100,15 @@ def _fallback_plan(question: str) -> dict[str, Any]:
 def plan_question(question: str) -> dict[str, Any]:
     schema = get_schema_summary()
     prompt = f"""
-You are planning a small agentic RAG workflow over a Student Management SQLite database and student support documents.
+You are planning a small agentic RAG workflow over a Student Management SQLite database and a Neo4j
+knowledge graph built from policies and advising notes with AutoSchemaKG.
 
 Return only JSON with these keys:
 - reasoning: short explanation
 - needs_sql: boolean
-- needs_vector: boolean
+- needs_graph: boolean
 - needs_chart: boolean
-- search_query: text to use for vector retrieval
+- graph_query: short text to search graph context for policies, interventions, and risk factors
 - sql: a single read-only SELECT or WITH query, or an empty string
 
 Prefer the views student_risk_summary, course_performance_summary, attendance_trend, assessment_scores,
@@ -107,9 +132,9 @@ Question:
         "question": question,
         "reasoning": str(plan.get("reasoning") or fallback["reasoning"]),
         "needs_sql": bool(plan.get("needs_sql", fallback["needs_sql"])),
-        "needs_vector": bool(plan.get("needs_vector", fallback["needs_vector"])),
+        "needs_graph": bool(plan.get("needs_graph", fallback["needs_graph"])),
         "needs_chart": bool(plan.get("needs_chart", fallback["needs_chart"])),
-        "search_query": str(plan.get("search_query") or fallback["search_query"]),
+        "graph_query": str(plan.get("graph_query") or fallback["graph_query"]),
         "sql": str(plan.get("sql") or fallback["sql"]),
     }
 
@@ -118,22 +143,39 @@ def decompose_query_request(plan: dict[str, Any]) -> list[dict[str, str]]:
     steps = [{"step": "plan", "detail": plan.get("reasoning", "")}]
     if plan.get("needs_sql"):
         steps.append({"step": "query_structured_data", "detail": plan.get("sql", "")})
-    if plan.get("needs_vector"):
-        steps.append({"step": "query_embeddings", "detail": plan.get("search_query", "")})
+    if plan.get("needs_graph"):
+        steps.append(
+            {
+                "step": "query_knowledge_graph",
+                "detail": plan.get("graph_query", ""),
+            }
+        )
     if plan.get("needs_chart"):
         steps.append({"step": "generate_chart", "detail": "Create a Vega-Lite chart spec from SQL rows."})
     else:
         steps.append({"step": "generate_table", "detail": "Create a compact Markdown table from SQL rows."})
     steps.append({"step": "replan", "detail": "Check whether evidence is missing and run a fallback query if needed."})
-    steps.append({"step": "answer", "detail": "Synthesize SQL evidence, retrieved notes, and sources."})
+    steps.append({"step": "answer", "detail": "Synthesize SQL evidence, graph context, and sources."})
     return steps
+
+
+def get_graph_context(graph_query: str) -> dict[str, Any]:
+    try:
+        return search_graph_context(graph_query)
+    except Neo4jUnavailableError as exc:
+        return {
+            "query": graph_query,
+            "matches": [],
+            "row_count": 0,
+            "warning": str(exc),
+        }
 
 
 def replan_if_needed(
     question: str,
     plan: dict[str, Any],
     sql_result: dict[str, Any] | None,
-    notes: list[dict[str, Any]],
+    graph_context: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     if sql_result and sql_result.get("row_count", 0) > 0:
         return plan, sql_result
@@ -149,10 +191,21 @@ def replan_if_needed(
         return plan, sql_result
 
 
+def _graph_sources(graph_context: dict[str, Any] | None) -> list[str]:
+    if not graph_context:
+        return []
+    sources = {
+        row.get("source_doc")
+        for row in graph_context.get("matches", [])
+        if row.get("source_doc")
+    }
+    return sorted(source for source in sources if source)
+
+
 def _fallback_answer(
     question: str,
     sql_result: dict[str, Any] | None,
-    notes: list[dict[str, Any]],
+    graph_context: dict[str, Any] | None,
     artifact: dict[str, Any],
 ) -> str:
     lines = [f"Question: {question}", ""]
@@ -160,11 +213,19 @@ def _fallback_answer(
         lines.append("Structured evidence:")
         lines.append(markdown_table(sql_result["rows"], sql_result["columns"]))
         lines.append("")
-    if notes:
-        lines.append("Retrieved notes:")
-        for note in notes[:3]:
-            first_line = note["content"].strip().splitlines()[0]
-            lines.append(f"- {first_line} ({note['source']})")
+    if graph_context and graph_context.get("matches"):
+        lines.append("Graph evidence:")
+        for match in graph_context["matches"][:5]:
+            label = ", ".join(match.get("labels") or [])
+            related = match.get("related_name")
+            relation = match.get("relation")
+            if related and relation:
+                lines.append(f"- {label} {match.get('name')} -[{relation}]-> {related}")
+            else:
+                lines.append(f"- {label} {match.get('name')}")
+        lines.append("")
+    elif graph_context and graph_context.get("warning"):
+        lines.append(graph_context["warning"])
         lines.append("")
     if artifact["type"] == "chart":
         lines.append("A Vega-Lite chart spec is included in the result under `artifact.chart_spec`.")
@@ -175,13 +236,13 @@ def answer_from_evidence(
     question: str,
     plan: dict[str, Any],
     sql_result: dict[str, Any] | None,
-    notes: list[dict[str, Any]],
+    graph_context: dict[str, Any] | None,
     artifact: dict[str, Any],
 ) -> str:
     evidence = {
         "plan": plan,
         "sql_result": sql_result,
-        "retrieved_notes": notes,
+        "graph_context": graph_context,
         "artifact": artifact,
     }
     prompt = f"""
@@ -189,7 +250,7 @@ Answer the student management question using only the evidence below.
 
 Rules:
 - Be concise and factual.
-- Mention when the answer depends on both structured data and advising or policy notes.
+- Mention when the answer depends on both structured data and graph policy or intervention context.
 - If a chart spec is included, describe what the chart shows.
 - Include practical next actions when the question is about risk or intervention.
 
@@ -203,7 +264,7 @@ Evidence JSON:
         response = get_llm().invoke(prompt)
         return response.content if hasattr(response, "content") else str(response)
     except Exception:
-        return _fallback_answer(question, sql_result, notes, artifact)
+        return _fallback_answer(question, sql_result, graph_context, artifact)
 
 
 def answer_student_question(question: str) -> dict[str, Any]:
@@ -211,23 +272,23 @@ def answer_student_question(question: str) -> dict[str, Any]:
     steps = decompose_query_request(plan)
 
     sql_result = run_sql(plan["sql"]) if plan.get("needs_sql") else None
-    notes = retrieve_notes(plan.get("search_query") or question) if plan.get("needs_vector") else []
-    plan, sql_result = replan_if_needed(question, plan, sql_result, notes)
+    graph_context = get_graph_context(plan.get("graph_query") or question) if plan.get("needs_graph") else None
+    plan, sql_result = replan_if_needed(question, plan, sql_result, graph_context)
 
     artifact = generate_table_or_chart_spec(
         question=question,
         sql_result=sql_result or {"rows": [], "columns": []},
         needs_chart=bool(plan.get("needs_chart")),
     )
-    answer = answer_from_evidence(question, plan, sql_result, notes, artifact)
-    sources = sorted({note["source"] for note in notes if note.get("source")})
+    answer = answer_from_evidence(question, plan, sql_result, graph_context, artifact)
+    sources = _graph_sources(graph_context)
 
     return {
         "question": question,
         "plan": plan,
         "steps": steps,
         "sql_result": sql_result,
-        "retrieved_notes": notes,
+        "graph_context": graph_context,
         "artifact": artifact,
         "answer": answer,
         "sources": sources,

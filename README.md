@@ -3,10 +3,10 @@
 A small local sample for answering Student Management questions with:
 
 - SQLite structured data for students, courses, enrollments, attendance, assessments, and fees.
-- Chroma embeddings over advising notes, policies, and course descriptions.
-- An agentic workflow that plans, decomposes the request, runs read-only SQL, retrieves notes, produces a table or Vega-Lite chart spec, replans if needed, and answers.
+- Neo4j knowledge graph facts extracted from policies and advising notes (AutoSchemaKG-style pipeline).
+- An agentic workflow that plans, decomposes the request, runs read-only SQL, queries graph context, produces a table or Vega-Lite chart spec, replans if needed, and answers.
 
-The project uses LM Studio's OpenAI-compatible local chat API, HuggingFace embeddings, Chroma, and Python's built-in SQLite support.
+The project uses LM Studio's OpenAI-compatible local chat API, Neo4j, and Python's built-in SQLite support.
 
 ---
 
@@ -30,7 +30,7 @@ student_management_agentic_rag/
     student_questions.json
   scripts/
     build_student_db.py
-    build_student_vectors.py
+    build_student_kg.py
   src/
     student_rag/
       __init__.py
@@ -40,7 +40,9 @@ student_management_agentic_rag/
       data/
         __init__.py
         db.py
-        retrieval.py
+      kg/
+        extraction.py
+        neo4j_store.py
       agents/
         __init__.py
         deterministic.py
@@ -66,10 +68,11 @@ pip install -r requirements.txt
 python scripts/build_student_db.py
 ```
 
-Build the vector store only if you use the Python agents (`student-agent`, `student-lmstudio-agent`):
+Build the Neo4j knowledge graph (required for graph tools):
 
 ```powershell
-python scripts/build_student_vectors.py
+# Set NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD in .env (default bolt://localhost:7687)
+python scripts/build_student_kg.py
 ```
 
 Ask questions interactively:
@@ -113,7 +116,6 @@ python eval_student_run.py
 Generated local artifacts are ignored by git:
 
 - `student_management.sqlite`
-- `chroma_student_db/`
 - `eval/student_results.jsonl`
 
 ## LM Studio Setup
