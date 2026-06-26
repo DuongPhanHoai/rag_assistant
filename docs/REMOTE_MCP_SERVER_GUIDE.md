@@ -6,23 +6,24 @@ This guide explains how to run the Student Management MCP server on one machine 
 
 Use remote MCP when:
 
-- The SQLite database and Chroma vector store live on Machine A.
+- The SQLite database lives on Machine A.
 - Cursor or LM Studio runs on Machine B.
 - You do not want to copy the project and rebuild assets on every client machine.
 
 Recommended setup:
 
 ```text
-Machine A: data/tool server
+Machine A: structured-data MCP server
   - D:\rag_assistant
   - student_management.sqlite
-  - chroma_student_db/
   - remote MCP server
 
 Machine B: chat client
   - Cursor or LM Studio
   - connects to Machine A over HTTP/SSE MCP
 ```
+
+MCP reads `student_management.sqlite` only on Machine A.
 
 ## 2. Start The Server On Machine A
 
@@ -32,7 +33,6 @@ From the project root:
 cd D:\rag_assistant
 pip install -r requirements.txt
 python scripts/build_student_db.py
-python scripts/build_student_vectors.py
 ```
 
 Start streamable HTTP MCP:
@@ -258,7 +258,7 @@ Try SSE transport on the server and switch the client URL to `/sse`.
 
 ### Tools are visible but slow
 
-The first vector query may load the embedding model and take longer. After that, retrieval should be faster.
+The first MCP SQL query may load Python dependencies and take longer on cold start. After that, SQLite queries should be fast.
 
 ### Prefer local MCP if possible
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SQLite Agentic RAG Sample Design</title>
+  <title>Student Management RAG with SQLite, AutoSchemaKG, and Neo4j</title>
   <style>
     body {
       color: #1f2937;
@@ -55,13 +55,13 @@
   </style>
 </head>
 <body>
-  <h1>SQLite Agentic RAG Sample Design</h1>
+  <h1>Student Management RAG with SQLite, AutoSchemaKG, and Neo4j</h1>
 
   <h2>Recommended Dataset</h2>
-  <p>Use <strong>Student Management</strong> because it naturally mixes structured analytics and unstructured evidence.</p>
+  <p>Use <strong>Student Management</strong> because it naturally mixes structured analytics, policy documents, advising notes, and relationship-heavy graph questions.</p>
   <ul>
     <li>Structured SQLite tables: <code>students</code>, <code>courses</code>, <code>enrollments</code>, <code>attendance</code>, <code>assessments</code>, <code>fees</code>, <code>advising_cases</code>.</li>
-    <li>Unstructured documents for embeddings: advising notes, course descriptions, scholarship policy, attendance policy, intervention playbooks.</li>
+    <li>Unstructured documents for AutoSchemaKG extraction: advising notes, course descriptions, scholarship policy, attendance policy, intervention playbooks.</li>
     <li>Example questions:
       <ul>
         <li>Which students are at risk this term and why?</li>
@@ -75,104 +75,139 @@
   <p>Alternative datasets: retail orders, clinic appointments, or HR training.</p>
 
   <h2>Target Architecture</h2>
+
+  <h3>Python Agents (SQLite + Neo4j)</h3>
   <div class="diagram">
-    <svg viewBox="0 0 980 760" role="img" aria-label="Target Architecture diagram">
+    <svg viewBox="0 0 700 520" role="img" aria-label="Python agent architecture diagram">
       <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <marker id="arrowhead-agent" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
           <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
         </marker>
       </defs>
-
-      <rect class="box" x="400" y="20" width="180" height="48"></rect>
-      <text class="label" x="490" y="50">User Question</text>
-
-      <rect class="box" x="400" y="100" width="180" height="48"></rect>
-      <text class="label" x="490" y="130">Runtime Choice</text>
-
-      <rect class="box" x="80" y="200" width="190" height="54"></rect>
-      <text class="label" x="175" y="225">student_rag.agents.deterministic</text>
-      <text class="label" x="175" y="242">Deterministic CLI</text>
-
-      <rect class="box" x="395" y="200" width="190" height="54"></rect>
-      <text class="label" x="490" y="225">student_rag.agents.lmstudio</text>
-      <text class="label" x="490" y="242">Python API Tool Loop</text>
-
-      <rect class="box" x="710" y="200" width="190" height="54"></rect>
-      <text class="label" x="805" y="225">student_rag.mcp.server</text>
-      <text class="label" x="805" y="242">LM Studio Chat MCP</text>
-
-      <rect class="box" x="80" y="330" width="190" height="54"></rect>
-      <text class="label" x="175" y="355">SQLite Tools</text>
-      <text class="label" x="175" y="372">run_sql, views</text>
-
-      <rect class="box" x="395" y="330" width="190" height="54"></rect>
-      <text class="label" x="490" y="355">High-Level MCP Tools</text>
-      <text class="label" x="490" y="372">risk, scholarship</text>
-
-      <rect class="box" x="710" y="330" width="190" height="54"></rect>
-      <text class="label" x="805" y="355">Chroma Tools</text>
-      <text class="label" x="805" y="372">retrieve_notes</text>
-
-      <rect class="box" x="80" y="455" width="190" height="54"></rect>
-      <text class="label" x="175" y="480">SQLite DB</text>
-      <text class="label" x="175" y="497">student_management.sqlite</text>
-
-      <rect class="box" x="710" y="455" width="190" height="54"></rect>
-      <text class="label" x="805" y="480">Vector Store</text>
-      <text class="label" x="805" y="497">chroma_student_db</text>
-
-      <rect class="box" x="395" y="540" width="190" height="54"></rect>
-      <text class="label" x="490" y="565">Evidence Bundle</text>
-      <text class="label" x="490" y="582">SQL + Notes + Sources</text>
-
-      <rect class="box" x="395" y="645" width="190" height="54"></rect>
-      <text class="label" x="490" y="670">Final Answer</text>
-      <text class="label" x="490" y="687">Table Or Chart</text>
-
-      <path class="arrow" d="M490 68 L490 100"></path>
-      <path class="arrow" d="M400 148 L220 200"></path>
-      <path class="arrow" d="M490 148 L490 200"></path>
-      <path class="arrow" d="M580 148 L760 200"></path>
-      <path class="arrow" d="M175 254 L175 330"></path>
-      <path class="arrow" d="M490 254 L175 330"></path>
-      <path class="arrow" d="M490 254 L805 330"></path>
-      <path class="arrow" d="M805 254 L490 330"></path>
-      <path class="arrow" d="M805 254 L805 330"></path>
-      <path class="arrow" d="M490 384 L175 455"></path>
-      <path class="arrow" d="M175 384 L175 455"></path>
-      <path class="arrow" d="M805 384 L805 455"></path>
-      <path class="arrow" d="M270 482 L395 565"></path>
-      <path class="arrow" d="M710 482 L585 565"></path>
-      <path class="arrow" d="M490 594 L490 645"></path>
+      <rect class="box" x="255" y="20" width="190" height="48"></rect>
+      <text class="label" x="350" y="50">User Question</text>
+      <rect class="box" x="80" y="100" width="190" height="54"></rect>
+      <text class="label" x="175" y="125">student_rag.agents.deterministic</text>
+      <text class="label" x="175" y="142">Deterministic CLI</text>
+      <rect class="box" x="430" y="100" width="190" height="54"></rect>
+      <text class="label" x="525" y="125">student_rag.agents.lmstudio</text>
+      <text class="label" x="525" y="142">Python API Tool Loop</text>
+      <rect class="box" x="80" y="210" width="190" height="54"></rect>
+      <text class="label" x="175" y="235">SQLite</text>
+      <text class="label" x="175" y="252">student_management.sqlite</text>
+      <rect class="box" x="430" y="210" width="190" height="54"></rect>
+      <text class="label" x="525" y="235">Neo4j</text>
+      <text class="label" x="525" y="252">graph context</text>
+      <rect class="box" x="255" y="340" width="190" height="54"></rect>
+      <text class="label" x="350" y="365">Answer Evidence</text>
+      <text class="label" x="350" y="382">SQL + graph evidence</text>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M350 68 L175 100"></path>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M350 68 L525 100"></path>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M175 154 L175 210"></path>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M525 154 L525 210"></path>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M270 237 L350 340"></path>
+      <path class="arrow" marker-end="url(#arrowhead-agent)" d="M430 237 L350 340"></path>
     </svg>
+  </div>
+
+  <h3>AutoSchemaKG + Neo4j Knowledge Graph</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 700 420" role="img" aria-label="AutoSchemaKG Neo4j architecture diagram">
+      <defs>
+        <marker id="arrowhead-kg" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+      <rect class="box" x="60" y="40" width="190" height="54"></rect>
+      <text class="label" x="155" y="65">Markdown Docs</text>
+      <text class="label" x="155" y="82">Policies + Notes</text>
+      <rect class="box" x="255" y="150" width="190" height="54"></rect>
+      <text class="label" x="350" y="175">AutoSchemaKG</text>
+      <text class="label" x="350" y="192">Triples + Schema</text>
+      <rect class="box" x="450" y="40" width="190" height="54"></rect>
+      <text class="label" x="545" y="65">Neo4j</text>
+      <text class="label" x="545" y="82">Knowledge Graph</text>
+      <rect class="box" x="255" y="280" width="190" height="54"></rect>
+      <text class="label" x="350" y="305">Graph Evidence</text>
+      <text class="label" x="350" y="322">Policies + Interventions</text>
+      <path class="arrow" marker-end="url(#arrowhead-kg)" d="M250 67 L350 150"></path>
+      <path class="arrow" marker-end="url(#arrowhead-kg)" d="M445 177 L545 94"></path>
+      <path class="arrow" marker-end="url(#arrowhead-kg)" d="M545 94 L350 280"></path>
+    </svg>
+    <p>Neo4j is preferred for the advanced showcase because AutoSchemaKG extracts entities, events, and relationships that are naturally graph-shaped.</p>
+  </div>
+
+  <h3>MCP (Database Only — Cursor / LM Studio Chat)</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 760 540" role="img" aria-label="MCP database architecture diagram">
+      <defs>
+        <marker id="arrowhead-mcp" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#374151"></polygon>
+        </marker>
+      </defs>
+      <rect class="box" x="285" y="20" width="190" height="48"></rect>
+      <text class="label" x="380" y="50">User Question</text>
+      <rect class="box" x="285" y="100" width="190" height="54"></rect>
+      <text class="label" x="380" y="125">Cursor / LM Studio Chat</text>
+      <text class="label" x="380" y="142">student_rag.mcp.server</text>
+      <rect class="box" x="285" y="210" width="190" height="54"></rect>
+      <text class="label" x="380" y="235">MCP Database Tools</text>
+      <text class="label" x="380" y="252">SQL + planned Cypher</text>
+      <rect class="box" x="80" y="330" width="190" height="54"></rect>
+      <text class="label" x="175" y="355">SQLite</text>
+      <text class="label" x="175" y="372">student metrics</text>
+      <rect class="box" x="490" y="330" width="190" height="54"></rect>
+      <text class="label" x="585" y="355">Neo4j</text>
+      <text class="label" x="585" y="372">graph context</text>
+      <rect class="box" x="285" y="450" width="190" height="54"></rect>
+      <text class="label" x="380" y="475">Final Answer</text>
+      <text class="label" x="380" y="492">database evidence</text>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M380 68 L380 100"></path>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M380 154 L380 210"></path>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M330 264 L175 330"></path>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M430 264 L585 330"></path>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M270 357 L380 450"></path>
+      <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M490 357 L380 450"></path>
+    </svg>
+    <p>MCP remains database-facing: SQLite for operational records and Neo4j for graph context.</p>
   </div>
 
   <h2>Implementation Plan</h2>
   <ol>
     <li>Add a small sample dataset under <code>data/student_management/</code> with CSV seed files and text or Markdown notes and policies for embedding retrieval.</li>
     <li>Add <code>scripts/build_student_db.py</code> to create <code>student_management.sqlite</code> from the seed files using Python <code>sqlite3</code>, including useful views such as <code>student_risk_summary</code>.</li>
-    <li>Add vector ingestion for unstructured student data using HuggingFace embeddings and a separate Chroma directory such as <code>chroma_student_db/</code>.</li>
+    <li>Add <code>scripts/build_student_kg.py</code> to run AutoSchemaKG over Markdown docs and load extracted entities, events, and relationships into Neo4j.</li>
     <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, retrieval, artifacts, LM Studio configuration, and paths.</li>
-    <li>Add <code>student_rag.agents.deterministic</code> with tools for <code>plan_question</code>, <code>run_sql</code>, <code>retrieve_notes</code>, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
-    <li>Add <code>student_rag.mcp.server</code> so LM Studio Chat can call local Student Management tools through MCP.</li>
+    <li>Add a planned <code>student_rag.kg</code> package for AutoSchemaKG extraction and Neo4j read-only Cypher queries.</li>
+    <li>Add <code>student_rag.agents.deterministic</code> with tools for <code>plan_question</code>, <code>run_sql</code>, graph context, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
+    <li>Add <code>student_rag.mcp.server</code> so Cursor and LM Studio Chat can call database-backed Student Management tools through MCP.</li>
     <li>Add demo questions and evaluation examples in <code>eval/student_questions.json</code>.</li>
     <li>Update docs with setup, workflow diagram, dataset description, and example prompts.</li>
   </ol>
 
   <h2>Scope Boundary</h2>
-  <p>Keep the first version local and lightweight: SQLite from the standard library, Chroma for embeddings, LM Studio through the existing OpenAI-compatible config, and chart output as a simple Vega-Lite JSON spec or saved PNG only if visualization is needed in the demo.</p>
+  <p>Use SQLite for operational records and Neo4j for graph context. Chart output stays a simple Vega-Lite JSON spec.</p>
 
   <h2>Current MCP Tools</h2>
+  <p>MCP is database-facing. It currently reads <strong>SQLite</strong> (<code>student_management.sqlite</code>) and should add read-only Neo4j graph tools for the AutoSchemaKG showcase. The same tool surface is used by Cursor and LM Studio Chat (local stdio or remote HTTP/SSE).</p>
   <ul>
-    <li><code>ask_student_management</code>: default plain-language tool that routes common questions to the right SQL and vector evidence internally.</li>
+    <li><code>ask_student_management</code>: routes common questions to structured SQLite queries.</li>
     <li><code>get_schema_summary</code>: returns tables, views, columns, and value hints.</li>
     <li><code>run_sql</code>: executes one read-only SQL query and returns warnings for suspicious values such as <code>scholarship_candidate = 'yes'</code>.</li>
     <li><code>get_at_risk_students</code>: returns high-risk and medium-risk students using the correct risk rules.</li>
-    <li><code>analyze_at_risk_students</code>: returns at-risk student rows plus advising notes and intervention policy context.</li>
+    <li><code>analyze_at_risk_students</code>: returns at-risk rows plus metric interpretation guidance.</li>
     <li><code>get_scholarship_candidates</code>: returns scholarship candidates using <code>scholarship_candidate = 1</code>.</li>
-    <li><code>analyze_scholarship_candidates</code>: returns scholarship candidate rows plus scholarship policy context.</li>
-    <li><code>retrieve_notes</code>: searches advising notes, policies, and course descriptions.</li>
+    <li><code>analyze_scholarship_candidates</code>: returns scholarship rows plus metric interpretation guidance.</li>
+    <li><code>get_student_graph_context</code> (planned): returns Neo4j policy, intervention, and risk-factor paths for one student.</li>
+    <li><code>query_knowledge_graph</code> (planned): runs read-only Cypher against Neo4j.</li>
     <li><code>generate_artifact</code>: creates a Markdown table or Vega-Lite chart spec from SQL results.</li>
+  </ul>
+
+  <h2>Neo4j Graph Model</h2>
+  <ul>
+    <li>Nodes: <code>Student</code>, <code>Course</code>, <code>Policy</code>, <code>RiskFactor</code>, <code>Intervention</code>, <code>Advisor</code>, <code>Program</code>, <code>SupportCase</code>.</li>
+    <li>Relationships: <code>HAS_RISK_FACTOR</code>, <code>TRIGGERS_POLICY</code>, <code>RECOMMENDS_INTERVENTION</code>, <code>ENROLLED_IN</code>, <code>ADVISED_BY</code>, <code>MENTIONED_IN</code>.</li>
+    <li>Evidence properties: <code>source_doc</code>, <code>evidence_text</code>, <code>confidence</code>, <code>term</code>.</li>
   </ul>
 
   <h2>Schema Value Hints</h2>

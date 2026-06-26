@@ -8,7 +8,6 @@ from starlette.responses import JSONResponse
 from student_rag.artifacts import generate_table_or_chart_spec
 from student_rag.data.db import get_schema_summary as get_db_schema_summary
 from student_rag.data.db import run_sql as run_student_sql
-from student_rag.data.retrieval import retrieve_notes as retrieve_student_notes
 
 
 mcp = FastMCP("student-management-rag")
@@ -40,24 +39,16 @@ def run_sql(sql: str) -> str:
 def ask_student_management(question: str) -> str:
     """Default tool for plain-language Student Management questions.
 
-    Use this first when the user asks a natural question about student risk, scholarship eligibility,
-    attendance, course performance, fees, advising notes, policies, tables, or charts.
+    Routes common questions to structured SQLite queries only. Policy and advising
+    explanation is left to the chat model (Cursor or LM Studio), not vector retrieval.
     """
     q = question.lower()
 
     if "scholarship" in q:
-        payload = json.loads(analyze_scholarship_candidates())
-        payload["recommended_response_style"] = (
-            "Answer who qualifies and why. Say weighted average score, not GPA, unless the user explicitly asks for GPA."
-        )
-        return _json(payload)
+        return analyze_scholarship_candidates()
 
     if "risk" in q or "at risk" in q or "intervention" in q:
-        payload = json.loads(analyze_at_risk_students())
-        payload["recommended_response_style"] = (
-            "Group high-risk and medium-risk students. Explain reasons using metrics and retrieved policy/advising context."
-        )
-        return _json(payload)
+        return analyze_at_risk_students()
 
     if "attendance" in q and ("trend" in q or "chart" in q or "month" in q or "graph" in q):
         sql_result = run_student_sql(
@@ -70,13 +61,11 @@ def ask_student_management(question: str) -> str:
             """
         )
         artifact = generate_table_or_chart_spec(question, sql_result, needs_chart=True)
-        notes = retrieve_student_notes("attendance policy urgent intervention low attendance", k=3)
         return _json(
             {
                 "structured_result": sql_result,
                 "artifact": artifact,
-                "retrieved_context": notes,
-                "recommended_response_style": "Describe the attendance trend and mention policy thresholds.",
+                "recommended_response_style": "Describe the attendance trend using the structured metrics.",
             }
         )
 
@@ -88,11 +77,9 @@ def ask_student_management(question: str) -> str:
             ORDER BY avg_score ASC
             """
         )
-        notes = retrieve_student_notes("course descriptions weak areas academic performance", k=3)
         return _json(
             {
                 "structured_result": sql_result,
-                "retrieved_context": notes,
                 "recommended_response_style": "Summarize course performance by average score and attendance.",
             }
         )
@@ -105,21 +92,18 @@ def ask_student_management(question: str) -> str:
             ORDER BY balance_due DESC
             """
         )
-        notes = retrieve_student_notes("financial hold policy fee balance financial aid", k=3)
         return _json(
             {
                 "structured_result": sql_result,
-                "retrieved_context": notes,
-                "recommended_response_style": "Explain fee balances and any financial-hold policy context.",
+                "recommended_response_style": "Explain fee balances from the structured rows.",
             }
         )
 
     return _json(
         {
             "schema": get_db_schema_summary(),
-            "retrieved_context": retrieve_student_notes(question, k=4),
             "recommended_response_style": (
-                "Use the schema and retrieved context to answer. If structured data is needed, call run_sql next."
+                "Use the schema to choose a read-only SQL query, then call run_sql or a high-level data tool."
             ),
         }
     )
@@ -141,27 +125,28 @@ def get_at_risk_students() -> str:
 
 @mcp.tool()
 def analyze_at_risk_students() -> str:
-    """Return at-risk students plus advising and policy context for explaining why and next actions."""
-    sql = """
-    SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due, risk_level, risk_reasons
-    FROM student_risk_summary
-    WHERE risk_level IN ('high', 'medium')
-    ORDER BY
-        CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
-        avg_score ASC
+    """Return at-risk students with structured metrics and interpretation guidance.
+
+    MCP exposes structured data only. Use the chat model to explain policy or next actions.
     """
-    sql_result = run_student_sql(sql)
-    notes = retrieve_student_notes(
-        "academic risk intervention low attendance low grades fee balance advising notes policy",
-        k=5,
+    sql_result = run_student_sql(
+        """
+        SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due, risk_level, risk_reasons
+        FROM student_risk_summary
+        WHERE risk_level IN ('high', 'medium')
+        ORDER BY
+            CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+            avg_score ASC
+        """
     )
     return _json(
         {
             "structured_result": sql_result,
-            "retrieved_context": notes,
             "guidance": (
-                "Use structured_result for risk levels and metrics. Use retrieved_context for advising notes, "
-                "policy thresholds, and recommended interventions."
+                "Use structured_result for risk levels and metrics. High-risk triggers: avg_score < 70, "
+                "attendance_pct < 75, balance_due > 500. Medium-risk indicators: avg_score < 80, "
+                "attendance_pct < 85, balance_due > 0. If risk_reasons is empty for a medium-risk student, "
+                "infer the reason from these metrics."
             ),
         },
     )
@@ -169,11 +154,7 @@ def analyze_at_risk_students() -> str:
 
 @mcp.tool()
 def get_scholarship_candidates() -> str:
-    """Return raw structured scholarship candidate rows only.
-
-    Prefer analyze_scholarship_candidates when the user asks why students qualify, asks for
-    eligibility criteria, or mentions GPA/score, attendance, and fee status together.
-    """
+    """Return scholarship candidate rows from student_risk_summary where scholarship_candidate = 1."""
     sql = """
     SELECT student_name, program, avg_score, attendance_pct, balance_due, fee_status
     FROM student_risk_summary
@@ -181,47 +162,33 @@ def get_scholarship_candidates() -> str:
     ORDER BY avg_score DESC
     """
     result = run_student_sql(sql)
-    result["guidance"] = (
-        "avg_score is a weighted average score, not a GPA column. "
-        "For policy criteria or explanation, call analyze_scholarship_candidates."
-    )
+    result["guidance"] = "avg_score is a weighted average score, not a GPA column."
     return _json(result)
 
 
 @mcp.tool()
 def analyze_scholarship_candidates() -> str:
-    """Preferred tool for scholarship eligibility questions.
+    """Return scholarship candidates with structured metrics and interpretation guidance.
 
-    Use this when the user asks who qualifies based on GPA/score, attendance, and fee status,
-    or asks for policy context, reasons, criteria, or explanation.
+    MCP exposes structured data only. Use the chat model to explain eligibility criteria.
     """
-    sql = """
-    SELECT student_name, program, avg_score, attendance_pct, balance_due, fee_status
-    FROM student_risk_summary
-    WHERE scholarship_candidate = 1
-    ORDER BY avg_score DESC
-    """
-    sql_result = run_student_sql(sql)
-    notes = retrieve_student_notes(
-        "scholarship support policy GPA weighted average score attendance fee status financial need",
-        k=4,
+    sql_result = run_student_sql(
+        """
+        SELECT student_name, program, avg_score, attendance_pct, balance_due, fee_status
+        FROM student_risk_summary
+        WHERE scholarship_candidate = 1
+        ORDER BY avg_score DESC
+        """
     )
     return _json(
         {
             "structured_result": sql_result,
-            "retrieved_context": notes,
             "guidance": (
-                "Use structured_result for eligible students and metrics. Use retrieved_context for scholarship "
-                "policy thresholds. Say weighted average score instead of GPA unless the user specifically asks for GPA."
+                "Use structured_result for eligible students and metrics. scholarship_candidate = 1 means yes. "
+                "Say weighted average score instead of GPA unless the user specifically asks for GPA."
             ),
         },
     )
-
-
-@mcp.tool()
-def retrieve_notes(query: str, k: int = 4) -> str:
-    """Search advising notes, policies, and course descriptions with vector retrieval."""
-    return _json(retrieve_student_notes(query, k=k))
 
 
 @mcp.tool()

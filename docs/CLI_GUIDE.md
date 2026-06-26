@@ -104,7 +104,13 @@ Create a chart of attendance trend by month for at-risk students.
 
 ## 6. Run The MCP Server For LM Studio Chat
 
-Use this when you want to type questions directly inside LM Studio Chat.
+Use this when you want to type questions directly inside LM Studio Chat. MCP reads `student_management.sqlite` only.
+
+Prerequisite:
+
+```powershell
+python scripts/build_student_db.py
+```
 
 First test that the MCP server starts:
 

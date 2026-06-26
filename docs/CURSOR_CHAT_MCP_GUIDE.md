@@ -18,8 +18,9 @@ From the project root:
 cd D:\rag_assistant
 pip install -r requirements.txt
 python scripts/build_student_db.py
-python scripts/build_student_vectors.py
 ```
+
+`build_student_vectors.py` is only needed for the Python agents (`student-agent`, `student-lmstudio-agent`). MCP reads `student_management.sqlite` only.
 
 ## 2. MCP Server Command
 
@@ -69,7 +70,7 @@ After saving the MCP config, reload MCP tools in Cursor if needed.
 
 ## 4. Tools Available In Cursor Chat
 
-The MCP server exposes:
+The MCP server reads structured data from SQLite only:
 
 - `ask_student_management`
 - `get_schema_summary`
@@ -78,10 +79,9 @@ The MCP server exposes:
 - `analyze_at_risk_students`
 - `get_scholarship_candidates`
 - `analyze_scholarship_candidates`
-- `retrieve_notes`
 - `generate_artifact`
 
-Use `ask_student_management` for normal chat questions. Prefer the `analyze_*` tools only when you want to force a specific workflow.
+Use `ask_student_management` for normal chat questions. Prefer the `analyze_*` tools when you want metric interpretation guidance included with the SQL rows.
 
 ## 5. Example Cursor Chat Prompts
 

@@ -59,11 +59,16 @@ student_management_agentic_rag/
 
 ## Setup
 
-Build the local assets:
+Build the local database (required for all modes):
 
 ```powershell
 pip install -r requirements.txt
 python scripts/build_student_db.py
+```
+
+Build the vector store only if you use the Python agents (`student-agent`, `student-lmstudio-agent`):
+
+```powershell
 python scripts/build_student_vectors.py
 ```
 

@@ -19,7 +19,7 @@ The chat-first flow is:
 LM Studio Chat
   -> Local model decides it needs a tool
   -> LM Studio calls student-mcp-server
-  -> Python queries SQLite or Chroma
+  -> Python queries SQLite structured data
   -> Tool result returns to LM Studio Chat
   -> Model writes the final answer
 ```
@@ -48,7 +48,7 @@ Build SQLite:
 python scripts/build_student_db.py
 ```
 
-Build Chroma embeddings:
+Build Chroma embeddings only if you also use the Python agents (`student-agent`, `student-lmstudio-agent`). MCP reads `student_management.sqlite` only.
 
 ```powershell
 python scripts/build_student_vectors.py
@@ -114,13 +114,13 @@ Using the student-management-rag tools, create a chart of attendance trend by mo
 
 ## 6. MCP Tools Exposed To LM Studio Chat
 
-`student_rag.mcp.server` exposes these tools:
+`student_rag.mcp.server` reads **SQLite only** (`student_management.sqlite`). Policy and advising explanations come from the LM Studio chat model, grounded in the metrics returned by MCP tools.
 
 ### `ask_student_management`
 
 Default tool for plain-language questions.
 
-Use this first for normal chat questions about risk, scholarships, attendance, course performance, fees, advising notes, policies, tables, or charts. It routes common questions to the right SQL and vector evidence internally.
+Use this first for normal chat questions about risk, scholarships, attendance, course performance, fees, tables, or charts. It routes common questions to structured SQLite queries.
 
 ### `get_schema_summary`
 
@@ -156,10 +156,9 @@ Use case: safer than asking the model to invent a risk SQL query.
 Returns:
 
 - Structured at-risk student rows.
-- Retrieved advising notes and risk/intervention policy context.
-- Guidance for using the evidence.
+- Metric interpretation guidance for high-risk and medium-risk thresholds.
 
-Use this when the user asks **why** students are at risk or asks for next actions.
+Use this when the user asks **why** students are at risk. LM Studio should explain policy and next actions from the structured metrics.
 
 ### `get_scholarship_candidates`
 
@@ -171,25 +170,16 @@ scholarship_candidate = 1
 
 Use case: safer than asking the model to guess whether the flag is `yes`, `true`, or `1`.
 
-This is a raw structured-data tool. If LM Studio calls this tool, it may answer from SQL rows only and skip policy/vector context.
-
 ### `analyze_scholarship_candidates`
 
 Returns:
 
 - Structured scholarship candidate rows.
-- Retrieved scholarship policy context.
 - Guidance to say `weighted average score` instead of `GPA` unless the user specifically asks for GPA.
 
-Use this when the user asks for eligibility explanation or policy support.
+Use this when the user asks for eligibility explanation. LM Studio should explain criteria from the structured metrics.
 
 For most natural scholarship questions, prefer this tool over `get_scholarship_candidates`.
-
-### `retrieve_notes`
-
-Searches the Chroma vector store for advising notes, policies, and course descriptions.
-
-Use case: explains why a student is at risk, what policy applies, or what intervention is recommended.
 
 ### `generate_artifact`
 
@@ -299,7 +289,7 @@ The command should stay running because it waits for MCP messages over stdio. St
 Try a more explicit prompt:
 
 ```text
-Use the student-management-rag MCP tools. First inspect the schema, then query the data and retrieve relevant notes before answering.
+Use the student-management-rag MCP tools. First inspect the schema, then query the structured data before answering.
 ```
 
 ### Empty Scholarship Result
@@ -338,7 +328,7 @@ This can happen with thinking models. Try:
 
 ### Chroma Or Embedding Errors
 
-Rebuild the vector store:
+These apply to the Python agents only (`student-agent`, `student-lmstudio-agent`), not to MCP chat.
 
 ```powershell
 python scripts/build_student_vectors.py
