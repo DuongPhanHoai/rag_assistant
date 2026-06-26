@@ -97,7 +97,7 @@
       <text class="label" x="175" y="252">student_management.sqlite</text>
       <rect class="box" x="430" y="210" width="190" height="54"></rect>
       <text class="label" x="525" y="235">Neo4j</text>
-      <text class="label" x="525" y="252">graph context</text>
+      <text class="label" x="525" y="252">AutoSchemaKG graph</text>
       <rect class="box" x="255" y="340" width="190" height="54"></rect>
       <text class="label" x="350" y="365">Answer Evidence</text>
       <text class="label" x="350" y="382">SQL + graph evidence</text>
@@ -108,6 +108,7 @@
       <path class="arrow" marker-end="url(#arrowhead-agent)" d="M270 237 L350 340"></path>
       <path class="arrow" marker-end="url(#arrowhead-agent)" d="M430 237 L350 340"></path>
     </svg>
+    <p><code>student_rag.agents.lmstudio</code> is the Python API Tool Loop: LM Studio chooses tools each turn; Python executes SQL against SQLite and planned read-only Cypher against Neo4j. The Neo4j graph is built offline from Markdown docs using <strong>AutoSchemaKG</strong>.</p>
   </div>
 
   <h3>AutoSchemaKG + Neo4j Knowledge Graph</h3>
@@ -137,7 +138,7 @@
     <p>Neo4j is preferred for the advanced showcase because AutoSchemaKG extracts entities, events, and relationships that are naturally graph-shaped.</p>
   </div>
 
-  <h3>MCP (Database Only — Cursor / LM Studio Chat)</h3>
+  <h3>MCP (SQLite + Neo4j Database Tools — Cursor / LM Studio Chat)</h3>
   <div class="diagram">
     <svg viewBox="0 0 760 540" role="img" aria-label="MCP database architecture diagram">
       <defs>
@@ -158,7 +159,7 @@
       <text class="label" x="175" y="372">student metrics</text>
       <rect class="box" x="490" y="330" width="190" height="54"></rect>
       <text class="label" x="585" y="355">Neo4j</text>
-      <text class="label" x="585" y="372">graph context</text>
+      <text class="label" x="585" y="372">AutoSchemaKG graph</text>
       <rect class="box" x="285" y="450" width="190" height="54"></rect>
       <text class="label" x="380" y="475">Final Answer</text>
       <text class="label" x="380" y="492">database evidence</text>
@@ -169,7 +170,7 @@
       <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M270 357 L380 450"></path>
       <path class="arrow" marker-end="url(#arrowhead-mcp)" d="M490 357 L380 450"></path>
     </svg>
-    <p>MCP remains database-facing: SQLite for operational records and Neo4j for graph context.</p>
+    <p>MCP remains database-facing: SQLite for operational records and read-only Neo4j graph context from AutoSchemaKG.</p>
   </div>
 
   <h2>Implementation Plan</h2>
@@ -180,7 +181,7 @@
     <li>Add <code>src/student_rag/</code> as the source package with focused modules for agents, SQLite, retrieval, artifacts, LM Studio configuration, and paths.</li>
     <li>Add a planned <code>student_rag.kg</code> package for AutoSchemaKG extraction and Neo4j read-only Cypher queries.</li>
     <li>Add <code>student_rag.agents.deterministic</code> with tools for <code>plan_question</code>, <code>run_sql</code>, graph context, <code>generate_table_or_chart_spec</code>, <code>replan</code>, and <code>answer</code>.</li>
-    <li>Add <code>student_rag.mcp.server</code> so Cursor and LM Studio Chat can call database-backed Student Management tools through MCP.</li>
+    <li>Add <code>student_rag.mcp.server</code> so Cursor and LM Studio Chat can call SQLite-backed and planned Neo4j-backed Student Management tools through MCP.</li>
     <li>Add demo questions and evaluation examples in <code>eval/student_questions.json</code>.</li>
     <li>Update docs with setup, workflow diagram, dataset description, and example prompts.</li>
   </ol>
@@ -189,7 +190,7 @@
   <p>Use SQLite for operational records and Neo4j for graph context. Chart output stays a simple Vega-Lite JSON spec.</p>
 
   <h2>Current MCP Tools</h2>
-  <p>MCP is database-facing. It currently reads <strong>SQLite</strong> (<code>student_management.sqlite</code>) and should add read-only Neo4j graph tools for the AutoSchemaKG showcase. The same tool surface is used by Cursor and LM Studio Chat (local stdio or remote HTTP/SSE).</p>
+  <p>MCP is database-facing. It currently reads <strong>SQLite</strong> (<code>student_management.sqlite</code>) and should also read <strong>Neo4j</strong> through read-only graph tools for the AutoSchemaKG showcase. The same tool surface is used by Cursor and LM Studio Chat (local stdio or remote HTTP/SSE).</p>
   <ul>
     <li><code>ask_student_management</code>: routes common questions to structured SQLite queries.</li>
     <li><code>get_schema_summary</code>: returns tables, views, columns, and value hints.</li>

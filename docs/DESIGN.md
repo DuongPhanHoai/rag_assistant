@@ -90,7 +90,7 @@ flowchart TD
 
 Neo4j is the preferred store for AutoSchemaKG output because the extracted facts are naturally graph-shaped: students, policies, interventions, risk factors, courses, advisors, and the relationships between them. This makes the showcase stronger than a document-search-only RAG demo and supports multi-hop questions such as "which policy and intervention path applies to this student?"
 
-### 3.3 MCP (Database Only — Cursor / LM Studio Chat)
+### 3.3 MCP (SQLite + Neo4j Database Tools — Cursor / LM Studio Chat)
 
 ```mermaid
 flowchart TD
@@ -116,7 +116,7 @@ flowchart TD
     McpAnswer --> FinalAnswer["Final Answer"]
 ```
 
-Remote MCP (`student_rag.mcp.http_server`) follows the same database-only path. Only the transport changes. MCP can query SQLite and planned Neo4j graph tools.
+Remote MCP (`student_rag.mcp.http_server`) follows the same database-tool path. Only the transport changes. MCP reads SQLite now and should also expose read-only Neo4j graph tools when the AutoSchemaKG graph is available.
 
 ## 4. Project Structure
 
@@ -238,11 +238,13 @@ CREATE CONSTRAINT course_id IF NOT EXISTS FOR (c:Course) REQUIRE c.course_id IS 
 - `replan_if_needed()` runs a fallback query when SQL evidence is missing.
 - `answer_from_evidence()` asks LM Studio to synthesize the final answer, with a deterministic fallback when LM Studio is unavailable.
 
-`student_rag.agents.lmstudio` exposes the same project capabilities through LM Studio's OpenAI-compatible tool-calling API:
+`student_rag.agents.lmstudio` is the Python API Tool Loop. A Python process calls LM Studio's OpenAI-compatible tool-calling API, lets the model choose tools each turn, executes the tools locally, and sends the tool results back to LM Studio for the final answer.
+
+Exposed tools:
 
 - `get_schema_summary` gives the model the SQLite tables, views, and columns.
 - `run_sql` executes validated read-only SQL.
-- Planned graph tools search Neo4j for policies, interventions, and relationship paths.
+- Planned graph tools query Neo4j for policy paths, interventions, and risk-factor relationships. Neo4j is populated offline from Markdown documents by AutoSchemaKG.
 - `generate_artifact` builds a Markdown table or Vega-Lite chart spec from the latest SQL result.
 - If tool calling fails or reaches the round limit, it falls back to `answer_student_question()`.
 
@@ -257,7 +259,7 @@ CREATE CONSTRAINT course_id IF NOT EXISTS FOR (c:Course) REQUIRE c.course_id IS 
 - `analyze_scholarship_candidates`
 - `generate_artifact`
 
-The current MCP server reads **`student_management.sqlite` only**. In the Neo4j showcase version, MCP should remain database-only but can expose read-only graph tools backed by Neo4j.
+The current MCP server reads **`student_management.sqlite` only**. In the Neo4j showcase version, MCP should access both databases: SQLite for operational student metrics and Neo4j for AutoSchemaKG-derived graph context.
 
 Planned Neo4j-backed MCP tools:
 
