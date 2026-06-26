@@ -12,6 +12,7 @@ from student_rag.kg.neo4j_store import (
     get_student_graph_context,
     query_knowledge_graph,
 )
+from student_rag.logging_config import configure_logging
 from student_rag.llm import get_llm
 from student_rag.paths import LLM_ONLINE_MODE
 
@@ -279,6 +280,7 @@ def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS
 
 
 def main() -> None:
+    configure_logging()
     print("LM Studio Student Tool Agent. Type 'quit' to exit.")
     while True:
         user_question = input("\nAsk a student management question: ").strip()

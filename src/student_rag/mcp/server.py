@@ -15,6 +15,7 @@ from student_rag.kg.neo4j_store import (
     get_student_graph_context as neo4j_get_student_graph_context,
     query_knowledge_graph as neo4j_query_knowledge_graph,
 )
+from student_rag.logging_config import configure_logging
 
 
 mcp = FastMCP("student-management-rag")
@@ -276,6 +277,7 @@ def generate_artifact(question: str, sql_result_json: str, needs_chart: bool = F
 
 
 def main() -> None:
+    configure_logging()
     mcp.run()
 
 

@@ -38,7 +38,10 @@ LMSTUDIO_BASE_URL=http://localhost:1234/v1
 LMSTUDIO_MODEL=qwen/qwen3-4b-thinking-2507
 LMSTUDIO_TIMEOUT_SECONDS=30
 LLM_ONLINE_MODE=true
+LOG_LEVEL=INFO
 ```
+
+`LOG_LEVEL=INFO` logs `get_schema_summary` results, LM Studio planning/answer prompts, the raw planning LLM response, and the merged plan in the CLI agent. Use `LOG_LEVEL=WARNING` to reduce noise.
 
 Set `LLM_ONLINE_MODE=false` to skip LM Studio and answer from SQLite + Neo4j evidence only. When `LLM_ONLINE_MODE=true`, the agent requires a working LM Studio connection and reports an error instead of silently falling back.
 
@@ -352,3 +355,66 @@ For reliable terminal output, prefer:
 ```powershell
 python -m student_rag.agents.deterministic
 ```
+
+## 10. Call tree
+
+student_rag.agents.deterministic.main()
+└─ answer_student_question(question)
+├─ plan_question(question)
+│  ├─ get_schema_summary()
+│  │  └─ student_rag.data.db.get_schema_summary()
+│  ├─ get_llm()
+│  │  └─ ChatOpenAI(base_url=LMSTUDIO_BASE_URL, model=LMSTUDIO_MODEL)
+│  └─ LM Studio API call
+│     └─ returns JSON plan:
+│        ├─ needs_sql
+│        ├─ needs_graph
+│        ├─ needs_chart
+│        ├─ graph_query
+│        └─ sql
+│
+├─ decompose_query_request(plan)
+│  └─ builds internal step list
+│
+├─ if needs_sql:
+│  └─ run_sql(plan["sql"])
+│     └─ student_rag.data.db.run_sql()
+│        └─ SQLite: student_management.sqlite
+│
+├─ if needs_graph:
+│  └─ get_graph_evidence(question, graph_query)
+│     ├─ extract student names from question
+│     ├─ get_related_risk_factors(student_name)
+│     │  └─ run_read_only_cypher()
+│     │     └─ Neo4j: StudentDB
+│     ├─ get_policy_intervention_path(student_name)
+│     │  └─ run_read_only_cypher()
+│     │     └─ Neo4j: StudentDB
+│     └─ search_graph_context(topic/query)
+│        └─ run_read_only_cypher()
+│           └─ Neo4j: StudentDB
+│
+├─ replan_if_needed(question, plan, sql_result, graph_context)
+│  └─ if SQL returned no rows:
+│     └─ run fallback SQL
+│
+├─ generate_table_or_chart_spec(question, sql_result, needs_chart)
+│  └─ returns:
+│     ├─ Markdown table, or
+│     └─ Vega-Lite chart spec
+│
+├─ answer_from_evidence(question, plan, sql_result, graph_context, artifact)
+│  ├─ get_llm()
+│  └─ LM Studio API call
+│     └─ final natural-language answer from evidence JSON
+│
+└─ return result dict
+├─ question
+├─ plan
+├─ steps
+├─ sql_result
+├─ graph_context
+├─ artifact
+├─ answer
+├─ sources
+└─ mode = "llm"

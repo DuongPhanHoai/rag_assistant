@@ -1,10 +1,14 @@
 import csv
+import logging
 import re
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 from student_rag.paths import DATA_DIR, DB_PATH
+
+
+logger = logging.getLogger(__name__)
 
 
 MAX_SQL_ROWS = 50
@@ -305,7 +309,9 @@ def get_schema_summary() -> str:
                 "- fee_summary.status uses text values: 'paid', 'partial', 'overdue'.",
             ]
         )
-        return "\n".join(lines)
+        summary = "\n".join(lines)
+        logger.info("get_schema_summary result:\n%s", summary)
+        return summary
     finally:
         conn.close()
 

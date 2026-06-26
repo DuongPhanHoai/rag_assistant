@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any
 
@@ -10,8 +11,12 @@ from student_rag.kg.neo4j_store import (
     get_related_risk_factors,
     search_graph_context,
 )
+from student_rag.logging_config import configure_logging
 from student_rag.llm import get_llm
 from student_rag.paths import LLM_ONLINE_MODE
+
+
+logger = logging.getLogger(__name__)
 
 
 STUDENT_NAMES = [
@@ -168,9 +173,11 @@ Schema:
 Question:
 {question}
 """
+    logger.info("plan_question prompt:\n%s", prompt.strip())
     try:
         response = get_llm().invoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
+        logger.info("plan_question LLM response:\n%s", content)
         plan = _extract_json(content)
         used_llm_plan = True
     except Exception as exc:
@@ -178,7 +185,7 @@ Question:
 
     fallback = _fallback_plan(question)
     fallback["used_llm_plan"] = used_llm_plan
-    return {
+    merged_plan = {
         "question": question,
         "reasoning": str(plan.get("reasoning") or fallback["reasoning"]),
         "needs_sql": bool(plan.get("needs_sql", fallback["needs_sql"])),
@@ -189,6 +196,8 @@ Question:
         "sql": str(plan.get("sql") or fallback["sql"]),
         "used_llm_plan": used_llm_plan,
     }
+    logger.info("plan_question plan:\n%s", json.dumps(merged_plan, ensure_ascii=False, indent=2))
+    return merged_plan
 
 
 def decompose_query_request(plan: dict[str, Any]) -> list[dict[str, str]]:
@@ -414,6 +423,7 @@ Question:
 Evidence JSON:
 {json.dumps(evidence, ensure_ascii=False, indent=2)}
 """
+    logger.info("answer_from_evidence prompt:\n%s", prompt.strip())
     try:
         response = get_llm().invoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
@@ -456,6 +466,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
 
 
 def main() -> None:
+    configure_logging()
     print("Student Agentic RAG sample. Type 'quit' to exit.")
     while True:
         user_question = input("\nAsk a student management question: ").strip()
