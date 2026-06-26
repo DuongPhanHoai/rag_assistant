@@ -75,6 +75,14 @@ Build the Neo4j knowledge graph (required for graph tools):
 python scripts/build_student_kg.py
 ```
 
+Control whether Python agents call LM Studio with:
+
+```env
+LLM_ONLINE_MODE=true
+```
+
+When `LLM_ONLINE_MODE=true`, LM Studio is required and connection failures are shown as errors. Set `LLM_ONLINE_MODE=false` to skip LM Studio and answer from SQLite + Neo4j evidence only.
+
 Ask questions interactively:
 
 ```powershell

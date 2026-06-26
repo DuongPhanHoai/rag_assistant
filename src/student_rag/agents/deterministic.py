@@ -11,6 +11,19 @@ from student_rag.kg.neo4j_store import (
     search_graph_context,
 )
 from student_rag.llm import get_llm
+from student_rag.paths import LLM_ONLINE_MODE
+
+
+STUDENT_NAMES = [
+    "Maya Tran",
+    "Noah Patel",
+    "Lina Garcia",
+    "Owen Smith",
+    "Aisha Khan",
+    "Minh Nguyen",
+    "Emma Brown",
+    "Carlos Reyes",
+]
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -20,8 +33,23 @@ def _extract_json(text: str) -> dict[str, Any]:
     return json.loads(match.group(0))
 
 
+def _extract_student_names(question: str) -> list[str]:
+    q = question.lower()
+    return [name for name in STUDENT_NAMES if name.lower() in q]
+
+
 def _heuristic_sql(question: str) -> str:
     q = question.lower()
+    student_names = _extract_student_names(question)
+
+    if student_names:
+        student_name = student_names[0].replace("'", "''")
+        return f"""
+        SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
+               risk_level, risk_reasons, scholarship_candidate
+        FROM student_risk_summary
+        WHERE student_name = '{student_name}'
+        """
 
     if "attendance" in q and ("trend" in q or "chart" in q or "month" in q):
         return """
@@ -54,6 +82,17 @@ def _heuristic_sql(question: str) -> str:
         ORDER BY balance_due DESC
         """
 
+    if "at risk" in q or "risk" in q:
+        return """
+        SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
+               risk_level, risk_reasons, scholarship_candidate
+        FROM student_risk_summary
+        WHERE risk_level IN ('high', 'medium')
+        ORDER BY
+            CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+            avg_score ASC
+        """
+
     return """
     SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
            risk_level, risk_reasons, scholarship_candidate
@@ -76,9 +115,11 @@ def _needs_graph_heuristic(question: str) -> bool:
             "why",
             "explain",
             "risk factor",
+            "risk factors",
             "recommend",
             "support",
             "scholarship",
+            "irregular attendance",
         ]
     )
 
@@ -86,18 +127,25 @@ def _needs_graph_heuristic(question: str) -> bool:
 def _fallback_plan(question: str) -> dict[str, Any]:
     q = question.lower()
     needs_chart = any(word in q for word in ["chart", "trend", "plot", "graph"])
+    student_names = _extract_student_names(question)
+    needs_sql = bool(student_names) or not _needs_graph_heuristic(question) or needs_chart
     return {
         "question": question,
-        "reasoning": "Fallback plan based on keywords.",
-        "needs_sql": True,
+        "reasoning": "Heuristic plan (LLM_ONLINE_MODE=false).",
+        "needs_sql": needs_sql,
         "needs_graph": _needs_graph_heuristic(question),
         "needs_chart": needs_chart,
         "graph_query": question,
+        "student_names": student_names,
         "sql": _heuristic_sql(question),
+        "used_llm_plan": False,
     }
 
 
 def plan_question(question: str) -> dict[str, Any]:
+    if not LLM_ONLINE_MODE:
+        return _fallback_plan(question)
+
     schema = get_schema_summary()
     prompt = f"""
 You are planning a small agentic RAG workflow over a Student Management SQLite database and a Neo4j
@@ -124,10 +172,12 @@ Question:
         response = get_llm().invoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
         plan = _extract_json(content)
-    except Exception:
-        return _fallback_plan(question)
+        used_llm_plan = True
+    except Exception as exc:
+        raise RuntimeError(f"LM Studio connection failed during planning: {exc}") from exc
 
     fallback = _fallback_plan(question)
+    fallback["used_llm_plan"] = used_llm_plan
     return {
         "question": question,
         "reasoning": str(plan.get("reasoning") or fallback["reasoning"]),
@@ -135,7 +185,9 @@ Question:
         "needs_graph": bool(plan.get("needs_graph", fallback["needs_graph"])),
         "needs_chart": bool(plan.get("needs_chart", fallback["needs_chart"])),
         "graph_query": str(plan.get("graph_query") or fallback["graph_query"]),
+        "student_names": _extract_student_names(question),
         "sql": str(plan.get("sql") or fallback["sql"]),
+        "used_llm_plan": used_llm_plan,
     }
 
 
@@ -159,16 +211,45 @@ def decompose_query_request(plan: dict[str, Any]) -> list[dict[str, str]]:
     return steps
 
 
-def get_graph_context(graph_query: str) -> dict[str, Any]:
+def _graph_topic_terms(question: str) -> list[str]:
+    q = question.lower()
+    terms: list[str] = []
+    if "irregular attendance" in q:
+        terms.append("Irregular Attendance")
+    if "financial hold" in q or "balance due" in q:
+        terms.append("Balance Due Greater Than 500")
+    if "scholarship" in q:
+        terms.append("Scholarship Support Policy")
+    return terms
+
+
+def get_graph_evidence(question: str, graph_query: str) -> dict[str, Any]:
+    student_names = _extract_student_names(question) or _extract_student_names(graph_query)
+    evidence: dict[str, Any] = {
+        "students": [],
+        "topic_matches": [],
+        "search_matches": [],
+    }
+
     try:
-        return search_graph_context(graph_query)
+        for student_name in student_names:
+            evidence["students"].append(
+                {
+                    "student_name": student_name,
+                    "risk_factors": get_related_risk_factors(student_name),
+                    "policy_paths": get_policy_intervention_path(student_name),
+                }
+            )
+
+        for term in _graph_topic_terms(question):
+            evidence["topic_matches"].append(search_graph_context(term))
+
+        if not evidence["students"] and not evidence["topic_matches"]:
+            evidence["search_matches"] = search_graph_context(graph_query).get("matches", [])
     except Neo4jUnavailableError as exc:
-        return {
-            "query": graph_query,
-            "matches": [],
-            "row_count": 0,
-            "warning": str(exc),
-        }
+        evidence["warning"] = str(exc)
+
+    return evidence
 
 
 def replan_if_needed(
@@ -194,12 +275,82 @@ def replan_if_needed(
 def _graph_sources(graph_context: dict[str, Any] | None) -> list[str]:
     if not graph_context:
         return []
-    sources = {
-        row.get("source_doc")
-        for row in graph_context.get("matches", [])
-        if row.get("source_doc")
-    }
-    return sorted(source for source in sources if source)
+
+    sources: set[str] = set()
+    for student_block in graph_context.get("students", []):
+        for row in student_block.get("risk_factors", {}).get("risk_factors", []):
+            if row.get("source_doc"):
+                sources.add(row["source_doc"])
+        for row in student_block.get("policy_paths", {}).get("paths", []):
+            if row.get("source_doc"):
+                sources.add(row["source_doc"])
+
+    for match_group in graph_context.get("topic_matches", []):
+        for row in match_group.get("matches", []):
+            if row.get("source_doc"):
+                sources.add(row["source_doc"])
+
+    for row in graph_context.get("search_matches", []):
+        if row.get("source_doc"):
+            sources.add(row["source_doc"])
+
+    return sorted(sources)
+
+
+def _format_graph_evidence(graph_context: dict[str, Any] | None) -> list[str]:
+    if not graph_context:
+        return []
+
+    lines: list[str] = []
+    if graph_context.get("warning"):
+        lines.append(graph_context["warning"])
+        lines.append("")
+
+    for student_block in graph_context.get("students", []):
+        student_name = student_block["student_name"]
+        lines.append(f"Graph evidence for {student_name}:")
+        risk_rows = student_block.get("risk_factors", {}).get("risk_factors", [])
+        if risk_rows:
+            lines.append("Risk factors:")
+            for row in risk_rows:
+                lines.append(f"- {row.get('risk_factor')}")
+        else:
+            lines.append("Risk factors: none found in Neo4j.")
+
+        path_rows = student_block.get("policy_paths", {}).get("paths", [])
+        if path_rows:
+            lines.append("Policy and intervention paths:")
+            for row in path_rows:
+                lines.append(
+                    f"- {row.get('risk_factor')} -> {row.get('policy')} -> {row.get('intervention')}"
+                )
+        else:
+            lines.append("Policy and intervention paths: none found in Neo4j.")
+        lines.append("")
+
+    for match_group in graph_context.get("topic_matches", []):
+        query = match_group.get("query", "topic")
+        lines.append(f"Graph topic matches for '{query}':")
+        for row in match_group.get("matches", [])[:5]:
+            related = row.get("related_name")
+            relation = row.get("relation")
+            name = row.get("name")
+            if related and relation:
+                lines.append(f"- {name} -[{relation}]-> {related}")
+            elif name:
+                lines.append(f"- {name}")
+        lines.append("")
+
+    for row in graph_context.get("search_matches", [])[:5]:
+        related = row.get("related_name")
+        relation = row.get("relation")
+        name = row.get("name")
+        if related and relation:
+            lines.append(f"- {name} -[{relation}]-> {related}")
+        elif name:
+            lines.append(f"- {name}")
+
+    return lines
 
 
 def _fallback_answer(
@@ -208,25 +359,25 @@ def _fallback_answer(
     graph_context: dict[str, Any] | None,
     artifact: dict[str, Any],
 ) -> str:
-    lines = [f"Question: {question}", ""]
+    if not LLM_ONLINE_MODE:
+        intro = "LLM online mode is disabled (LLM_ONLINE_MODE=false). This answer is synthesized from SQLite and Neo4j evidence only."
+    else:
+        intro = "LM Studio is unavailable. This answer is synthesized directly from SQLite and Neo4j evidence."
+
+    lines = [intro, ""]
+
+    graph_lines = _format_graph_evidence(graph_context)
+    if graph_lines:
+        lines.extend(graph_lines)
+
     if sql_result and sql_result.get("rows"):
         lines.append("Structured evidence:")
         lines.append(markdown_table(sql_result["rows"], sql_result["columns"]))
         lines.append("")
-    if graph_context and graph_context.get("matches"):
-        lines.append("Graph evidence:")
-        for match in graph_context["matches"][:5]:
-            label = ", ".join(match.get("labels") or [])
-            related = match.get("related_name")
-            relation = match.get("relation")
-            if related and relation:
-                lines.append(f"- {label} {match.get('name')} -[{relation}]-> {related}")
-            else:
-                lines.append(f"- {label} {match.get('name')}")
-        lines.append("")
-    elif graph_context and graph_context.get("warning"):
-        lines.append(graph_context["warning"])
-        lines.append("")
+
+    if not graph_lines and not (sql_result and sql_result.get("rows")):
+        lines.append("No usable SQLite or Neo4j evidence was found for this question.")
+
     if artifact["type"] == "chart":
         lines.append("A Vega-Lite chart spec is included in the result under `artifact.chart_spec`.")
     return "\n".join(lines).strip()
@@ -238,7 +389,10 @@ def answer_from_evidence(
     sql_result: dict[str, Any] | None,
     graph_context: dict[str, Any] | None,
     artifact: dict[str, Any],
-) -> str:
+) -> tuple[str, bool]:
+    if not LLM_ONLINE_MODE:
+        return _fallback_answer(question, sql_result, graph_context, artifact), False
+
     evidence = {
         "plan": plan,
         "sql_result": sql_result,
@@ -262,9 +416,10 @@ Evidence JSON:
 """
     try:
         response = get_llm().invoke(prompt)
-        return response.content if hasattr(response, "content") else str(response)
-    except Exception:
-        return _fallback_answer(question, sql_result, graph_context, artifact)
+        content = response.content if hasattr(response, "content") else str(response)
+        return content, True
+    except Exception as exc:
+        raise RuntimeError(f"LM Studio connection failed during answer synthesis: {exc}") from exc
 
 
 def answer_student_question(question: str) -> dict[str, Any]:
@@ -272,7 +427,11 @@ def answer_student_question(question: str) -> dict[str, Any]:
     steps = decompose_query_request(plan)
 
     sql_result = run_sql(plan["sql"]) if plan.get("needs_sql") else None
-    graph_context = get_graph_context(plan.get("graph_query") or question) if plan.get("needs_graph") else None
+    graph_context = (
+        get_graph_evidence(question, plan.get("graph_query") or question)
+        if plan.get("needs_graph")
+        else None
+    )
     plan, sql_result = replan_if_needed(question, plan, sql_result, graph_context)
 
     artifact = generate_table_or_chart_spec(
@@ -280,7 +439,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
         sql_result=sql_result or {"rows": [], "columns": []},
         needs_chart=bool(plan.get("needs_chart")),
     )
-    answer = answer_from_evidence(question, plan, sql_result, graph_context, artifact)
+    answer, used_llm_answer = answer_from_evidence(question, plan, sql_result, graph_context, artifact)
     sources = _graph_sources(graph_context)
 
     return {
@@ -292,6 +451,7 @@ def answer_student_question(question: str) -> dict[str, Any]:
         "artifact": artifact,
         "answer": answer,
         "sources": sources,
+        "mode": "llm" if used_llm_answer else "offline_evidence",
     }
 
 
@@ -303,6 +463,7 @@ def main() -> None:
             break
         try:
             result = answer_student_question(user_question)
+            print(f"\nMode: {result.get('mode', 'unknown')}")
             print("\nPlan:")
             print(json.dumps(result["plan"], indent=2))
             print("\nAnswer:\n", result["answer"])

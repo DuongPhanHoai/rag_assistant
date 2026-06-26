@@ -37,7 +37,10 @@ Create or update `.env`:
 LMSTUDIO_BASE_URL=http://localhost:1234/v1
 LMSTUDIO_MODEL=qwen/qwen3-4b-thinking-2507
 LMSTUDIO_TIMEOUT_SECONDS=30
+LLM_ONLINE_MODE=true
 ```
+
+Set `LLM_ONLINE_MODE=false` to skip LM Studio and answer from SQLite + Neo4j evidence only. When `LLM_ONLINE_MODE=true`, the agent requires a working LM Studio connection and reports an error instead of silently falling back.
 
 Start LM Studio, load the model, and start the local server on port `1234`.
 
@@ -71,7 +74,7 @@ The SQLite file is ignored by git.
 
 ## 4. Run The Deterministic Agent
 
-Use this when you want the most reliable local demo path. It uses deterministic fallback planning if LM Studio is slow or unavailable.
+Use this when you want the most reliable local demo path. With `LLM_ONLINE_MODE=true`, LM Studio is required for planning and final synthesis; with `LLM_ONLINE_MODE=false`, it uses deterministic evidence-only planning over SQLite and Neo4j.
 
 ```powershell
 python -m student_rag.agents.deterministic
@@ -175,7 +178,91 @@ eval/student_results.jsonl
 
 This file is ignored by git.
 
-## 8. Quick Validation Commands
+## 8. Advanced Example Questions
+
+Use these after both `build_student_db.py` and `build_student_kg.py` have been run. Keep the earlier basic examples in sections 4, 5, and 6; these prompts exercise SQLite, Neo4j graph tools, and chart artifacts together.
+
+### Hybrid SQL + Graph
+
+Deterministic agent (`student-agent`) or LM Studio tool agent (`student-lmstudio-agent`):
+
+```text
+Which high-risk students have the largest fee balances, and what intervention paths does the knowledge graph recommend for Carlos Reyes?
+```
+
+```text
+Compare Owen Smith and Carlos Reyes using student_risk_summary metrics and explain the policy/intervention paths from the Neo4j graph.
+```
+
+```text
+Who qualifies for scholarship support based on score, attendance, and fee status, and what does the Scholarship Support Policy recommend?
+```
+
+### Graph-Focused (Neo4j / AutoSchemaKG)
+
+Python agents or MCP chat:
+
+```text
+What risk factors are linked to Noah Patel, and which policy and intervention path applies to irregular attendance?
+```
+
+```text
+For Owen Smith, show the graph path from risk factor to policy to recommended intervention.
+```
+
+```text
+Which students are advised by Prof. Malik, and what graph context exists for Carlos Reyes?
+```
+
+MCP chat (explicit tool use):
+
+```text
+Using the student-management-rag tools, call get_policy_intervention_path for Carlos Reyes and summarize the recommended interventions.
+```
+
+```text
+Using the student-management-rag tools, run analyze_at_risk_students and explain medium-risk students using both SQL metrics and graph_context.
+```
+
+### Chart / Artifact Questions
+
+LM Studio tool agent or deterministic agent:
+
+```text
+Create a chart of attendance trend by month for high-risk students and explain which students drive the weakest months.
+```
+
+```text
+Show average grade by course as a table, then chart attendance trend by month for at-risk students.
+```
+
+```text
+Build a Vega-Lite chart of attendance_pct by month for Owen Smith and Carlos Reyes, and explain the attendance policy thresholds.
+```
+
+MCP chat:
+
+```text
+Using the student-management-rag tools, query attendance_trend for high-risk students, call generate_artifact with needs_chart=true, and describe the trend.
+```
+
+### Multi-Step Showcase Prompts
+
+These are good demo questions for the full showcase:
+
+```text
+Which students are at risk this term, why do metrics flag them, and what policy/intervention paths does the knowledge graph suggest for the highest-risk cases?
+```
+
+```text
+Show course weak areas from SQLite, identify students most at risk in the weakest courses, and pull graph evidence for recommended interventions.
+```
+
+```text
+Who has overdue balances above 500, which financial-hold policy applies, and what intervention does the graph recommend?
+```
+
+## 9. Quick Validation Commands
 
 Check Python compilation:
 
@@ -202,7 +289,7 @@ Expected medium-risk students include:
 
 When reviewing answers, do not treat empty `risk_reasons` as "no reason" for medium-risk students. Medium risk is inferred from metrics such as average score below `80`, attendance below `85%`, or a partial fee balance.
 
-## 9. Common Problems
+## 10. Common Problems
 
 ### `ModuleNotFoundError: student_rag`
 
@@ -225,6 +312,14 @@ Increase timeout in `.env`:
 ```env
 LMSTUDIO_TIMEOUT_SECONDS=60
 ```
+
+If you intentionally want to run without LM Studio, set:
+
+```env
+LLM_ONLINE_MODE=false
+```
+
+If `LLM_ONLINE_MODE=true`, timeout and connection failures are shown as errors instead of being hidden by offline fallback behavior.
 
 ### Neo4j Unavailable
 

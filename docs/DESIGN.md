@@ -235,7 +235,12 @@ CREATE CONSTRAINT course_id IF NOT EXISTS FOR (c:Course) REQUIRE c.course_id IS 
 - Graph context functions run read-only Cypher against Neo4j for policy, intervention, and relationship evidence.
 - `generate_table_or_chart_spec()` returns a Markdown table or Vega-Lite chart spec.
 - `replan_if_needed()` runs a fallback query when SQL evidence is missing.
-- `answer_from_evidence()` asks LM Studio to synthesize the final answer, with a deterministic fallback when LM Studio is unavailable.
+- `answer_from_evidence()` asks LM Studio to synthesize the final answer when `LLM_ONLINE_MODE=true`; if the LLM is unreachable in online mode, the agent reports an error instead of silently falling back.
+
+`LLM_ONLINE_MODE` controls whether the Python agents use LM Studio:
+
+- `LLM_ONLINE_MODE=true`: online mode. Planning and final synthesis require LM Studio. Connection failures are surfaced to the CLI as errors.
+- `LLM_ONLINE_MODE=false`: evidence-only mode. The agent skips LM Studio and uses heuristic planning plus SQLite and Neo4j evidence. The CLI reports `Mode: offline_evidence`.
 
 `student_rag.agents.lmstudio` is the Python API Tool Loop. A Python process calls LM Studio's OpenAI-compatible tool-calling API, lets the model choose tools each turn, executes the tools locally, and sends the tool results back to LM Studio for the final answer.
 
@@ -245,7 +250,7 @@ Exposed tools:
 - `run_sql` executes validated read-only SQL.
 - Planned graph tools query Neo4j for policy paths, interventions, and risk-factor relationships. Neo4j is populated offline from Markdown documents by AutoSchemaKG.
 - `generate_artifact` builds a Markdown table or Vega-Lite chart spec from the latest SQL result.
-- If tool calling fails or reaches the round limit, it falls back to `answer_student_question()`.
+- If `LLM_ONLINE_MODE=false`, this path delegates to the deterministic evidence-only workflow. If `LLM_ONLINE_MODE=true`, tool-loop connection failures are reported as errors.
 
 `student_rag.mcp.server` exposes structured-data tools for Cursor Chat and LM Studio Chat through MCP (local stdio or remote HTTP/SSE):
 
@@ -283,21 +288,31 @@ The high-level MCP tools reduce common model mistakes. For example, `get_scholar
 sequenceDiagram
     participant User
     participant Agent as student_rag.agents.deterministic or student_rag.agents.lmstudio
+    participant Mode as LLM_ONLINE_MODE
     participant SQLite as SQLite
     participant Neo4j as Neo4j
     participant LLM as LM Studio
 
     User->>Agent: Ask natural-language question
-    Agent->>LLM: Request plan or tool choice
-    LLM-->>Agent: Plan with SQL, graph, and artifact needs
+    Agent->>Mode: Check runtime mode
+    alt LLM_ONLINE_MODE=true
+        Agent->>LLM: Request plan or tool choice
+        LLM-->>Agent: Plan with SQL, graph, and artifact needs
+    else LLM_ONLINE_MODE=false
+        Agent->>Agent: Build heuristic plan without LLM
+    end
     Agent->>SQLite: Execute validated read-only SQL
     SQLite-->>Agent: Structured rows
     Agent->>Neo4j: Retrieve graph context with read-only Cypher
     Neo4j-->>Agent: Policy/intervention paths and evidence
     Agent->>Agent: Build table or chart artifact
     Agent->>Agent: Replan if evidence is missing
-    Agent->>LLM: Synthesize final answer from evidence
-    LLM-->>Agent: Final response
+    alt LLM_ONLINE_MODE=true
+        Agent->>LLM: Synthesize final answer from evidence
+        LLM-->>Agent: Final response
+    else LLM_ONLINE_MODE=false
+        Agent->>Agent: Synthesize evidence-only response
+    end
     Agent-->>User: Answer, sources, and artifact
 ```
 

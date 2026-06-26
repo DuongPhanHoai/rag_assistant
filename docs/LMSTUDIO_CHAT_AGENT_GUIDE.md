@@ -60,6 +60,7 @@ Set Neo4j in `.env`:
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=your-password
+NEO4J_DATABASE=StudentDB
 ```
 
 ## 4. Configure LM Studio Chat MCP
@@ -122,7 +123,7 @@ Using the student-management-rag tools, create a chart of attendance trend by mo
 
 ## 6. MCP Tools Exposed To LM Studio Chat
 
-`student_rag.mcp.server` reads **SQLite only** (`student_management.sqlite`). Policy and advising explanations come from the LM Studio chat model, grounded in the metrics returned by MCP tools.
+`student_rag.mcp.server` reads SQLite (`student_management.sqlite`) and, when the graph has been built, read-only Neo4j graph context from the AutoSchemaKG pipeline. Policy and advising explanations come from the LM Studio chat model, grounded in the metrics and graph context returned by MCP tools.
 
 ### `ask_student_management`
 
@@ -214,7 +215,13 @@ Create or update `.env`:
 LMSTUDIO_BASE_URL=http://localhost:1234/v1
 LMSTUDIO_MODEL=qwen/qwen3-4b-thinking-2507
 LMSTUDIO_TIMEOUT_SECONDS=30
+LLM_ONLINE_MODE=true
 ```
+
+`LLM_ONLINE_MODE` controls Python-agent behavior:
+
+- `LLM_ONLINE_MODE=true`: the Python API agent requires LM Studio. If the server is unreachable, the CLI reports an error instead of silently returning an evidence-only answer.
+- `LLM_ONLINE_MODE=false`: the Python API agent skips LM Studio and delegates to the deterministic evidence-only workflow over SQLite and Neo4j.
 
 Run:
 

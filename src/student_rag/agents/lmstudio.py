@@ -13,6 +13,7 @@ from student_rag.kg.neo4j_store import (
     query_knowledge_graph,
 )
 from student_rag.llm import get_llm
+from student_rag.paths import LLM_ONLINE_MODE
 
 
 MAX_AGENT_ROUNDS = 6
@@ -194,6 +195,11 @@ def _graph_sources(graph_results: list[dict[str, Any]]) -> list[str]:
 
 def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS) -> dict[str, Any]:
     """Run LM Studio's OpenAI-compatible tool-calling loop over student tools."""
+    if not LLM_ONLINE_MODE:
+        fallback = answer_student_question(question)
+        fallback["mode"] = "offline_evidence"
+        return fallback
+
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=question),
@@ -263,16 +269,13 @@ def answer_with_lmstudio_tools(question: str, max_rounds: int = MAX_AGENT_ROUNDS
                     )
                 )
 
-        fallback = answer_student_question(question)
-        fallback["mode"] = "fallback_after_max_rounds"
-        fallback["transcript"] = transcript
-        return fallback
+        raise RuntimeError(
+            "LM Studio tool loop reached max rounds without a final answer."
+        )
+    except RuntimeError:
+        raise
     except Exception as exc:
-        fallback = answer_student_question(question)
-        fallback["mode"] = "fallback_after_tool_error"
-        fallback["tool_error"] = str(exc)
-        fallback["transcript"] = transcript
-        return fallback
+        raise RuntimeError(f"LM Studio connection failed during tool loop: {exc}") from exc
 
 
 def main() -> None:
@@ -282,22 +285,25 @@ def main() -> None:
         if user_question.lower() in {"quit", "exit"}:
             break
 
-        result = answer_with_lmstudio_tools(user_question)
-        print(f"\nMode: {result.get('mode')}")
-        print("\nAnswer:\n", result["answer"])
+        try:
+            result = answer_with_lmstudio_tools(user_question)
+            print(f"\nMode: {result.get('mode')}")
+            print("\nAnswer:\n", result["answer"])
 
-        artifact = result.get("artifact")
-        if artifact:
-            if artifact["type"] == "table":
-                print("\nTable:\n", artifact["markdown"])
-            else:
-                print("\nChart spec:\n", json.dumps(artifact["chart_spec"], indent=2))
+            artifact = result.get("artifact")
+            if artifact:
+                if artifact["type"] == "table":
+                    print("\nTable:\n", artifact["markdown"])
+                else:
+                    print("\nChart spec:\n", json.dumps(artifact["chart_spec"], indent=2))
 
-        sources = result.get("sources", [])
-        if sources:
-            print("\nSources:")
-            for source in sources:
-                print(" -", source)
+            sources = result.get("sources", [])
+            if sources:
+                print("\nSources:")
+                for source in sources:
+                    print(" -", source)
+        except Exception as exc:
+            print("Error:", exc)
 
 
 if __name__ == "__main__":

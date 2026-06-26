@@ -3,8 +3,10 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
+from student_rag.paths import ROOT_DIR
 
-load_dotenv()
+
+load_dotenv(ROOT_DIR / ".env")
 
 LMSTUDIO_BASE_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
 LMSTUDIO_MODEL = os.getenv("LMSTUDIO_MODEL", "lmstudio")
