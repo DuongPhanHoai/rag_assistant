@@ -23,3 +23,13 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 LLM_ONLINE_MODE = _env_bool("LLM_ONLINE_MODE", default=True)
+
+# MCP server mode:
+# - proxy: forward whole questions to answer_student_question() (CLI agent path)
+# - tools: expose SQLite/Neo4j schema + low-level tools for the host model
+STUDENT_MCP_MODE = os.getenv("STUDENT_MCP_MODE", "tools").strip().lower()
+if STUDENT_MCP_MODE not in {"proxy", "tools"}:
+    STUDENT_MCP_MODE = "tools"
+
+# Recommended LLM timeout for proxy mode (two LLM calls). Host MCP clients often timeout ~60-120s.
+MCP_PROXY_LLM_TIMEOUT_SECONDS = float(os.getenv("MCP_PROXY_LLM_TIMEOUT_SECONDS", "120"))

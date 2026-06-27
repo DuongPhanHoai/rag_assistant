@@ -242,6 +242,13 @@ python test/run_model_eval.py
 # 3. Open model_eval_history.csv — each model run is a column
 ```
 
+Generate an HTML dashboard (pass %, timing charts, full matrix):
+
+```powershell
+python test/scripts/generate_model_eval_report.py
+start test/results/model_eval_report.html
+```
+
 ### Hallucination evaluation history (CSV)
 
 Use **`run_hallucination_eval.py`** when comparing **answer content** with human review:

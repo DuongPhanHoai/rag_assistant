@@ -246,3 +246,60 @@ def search_graph_context(query: str, limit: int = 8) -> dict[str, Any]:
         "matches": result["rows"],
         "row_count": result["row_count"],
     }
+
+
+def get_graph_schema_summary() -> str:
+    """Return Neo4j node labels, relationship types, and common path patterns."""
+    static = """
+Neo4j knowledge graph (Student Management)
+
+Node labels:
+- Student(name)
+- RiskFactor(name)
+- Policy(name)
+- Intervention(name)
+- Course(course_id, name)
+- Advisor(name)
+- Program(name)
+
+Relationship types:
+- HAS_RISK_FACTOR: Student -> RiskFactor
+- TRIGGERS_POLICY: RiskFactor -> Policy
+- RECOMMENDS_INTERVENTION: Policy -> Intervention
+- ENROLLED_IN: Student -> Course
+- ADVISED_BY: Student -> Advisor
+
+Common path pattern:
+  Student -[:HAS_RISK_FACTOR]-> RiskFactor -[:TRIGGERS_POLICY]-> Policy -[:RECOMMENDS_INTERVENTION]-> Intervention
+
+Relationship properties: source_doc, evidence_text, confidence, term
+
+Read-only Cypher only. Prefer search_graph_context(query) for policy topics, or the student-specific helpers.
+""".strip()
+
+    if not is_neo4j_configured():
+        return static + "\n\n(live Neo4j metadata unavailable — not configured)"
+
+    labels: list[str] = []
+    rel_types: list[str] = []
+    try:
+        with _get_driver() as driver:
+            with driver.session(database=NEO4J_DATABASE) as session:
+                label_rows = session.run("CALL db.labels() YIELD label RETURN label ORDER BY label").data()
+                rel_rows = session.run(
+                    "CALL db.relationshipTypes() YIELD relationshipType "
+                    "RETURN relationshipType ORDER BY relationshipType"
+                ).data()
+                labels = [row["label"] for row in label_rows]
+                rel_types = [row["relationshipType"] for row in rel_rows]
+    except (ServiceUnavailable, Neo4jError):
+        return static + "\n\n(live Neo4j metadata unavailable — database not reachable)"
+
+    live = [
+        static,
+        "",
+        "Live metadata:",
+        f"Labels: {', '.join(labels) if labels else '(none)'}",
+        f"Relationship types: {', '.join(rel_types) if rel_types else '(none)'}",
+    ]
+    return "\n".join(live)

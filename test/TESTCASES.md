@@ -81,6 +81,13 @@ Outputs:
 
 Switch `LMSTUDIO_MODEL` in `.env` and re-run to build comparison columns side-by-side.
 
+Generate HTML comparison report (charts + pass % + timing):
+
+```powershell
+python test/scripts/generate_model_eval_report.py
+# opens: test/results/model_eval_report.html
+```
+
 Hallucination-focused runs with full answers for human review: [docs/HALLUCINATION_CASES.md](docs/HALLUCINATION_CASES.md) · `python test/run_hallucination_eval.py`
 
 ---
@@ -163,6 +170,14 @@ Details per suite: see **§2 Does this suite evaluate the LLM?** in each doc und
 1. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for terminology and constraints.
 2. Review each suite document (suggested order: planning → sql → kg → chart → graph → integration).
 3. When adding cases, update `*/cases.json` and run via [RUNNING_TESTS.md](RUNNING_TESTS.md).
+
+---
+
+## Planned (not implemented)
+
+| Item | Design doc |
+|------|------------|
+| **ETL / data quality suite (`etl/`)** | [docs/ETL_DATA_QUALITY_PLAN.md](../docs/ETL_DATA_QUALITY_PLAN.md) — draft for review |
 
 ---
 

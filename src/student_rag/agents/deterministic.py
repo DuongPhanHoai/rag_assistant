@@ -14,21 +14,15 @@ from student_rag.kg.neo4j_store import (
 from student_rag.logging_config import configure_logging
 from student_rag.llm import get_llm
 from student_rag.paths import LLM_ONLINE_MODE
+from student_rag.query_routing import (
+    extract_student_names,
+    graph_topic_terms,
+    heuristic_sql,
+    needs_graph_heuristic,
+)
 
 
 logger = logging.getLogger(__name__)
-
-
-STUDENT_NAMES = [
-    "Maya Tran",
-    "Noah Patel",
-    "Lina Garcia",
-    "Owen Smith",
-    "Aisha Khan",
-    "Minh Nguyen",
-    "Emma Brown",
-    "Carlos Reyes",
-]
 
 
 def _extract_json(text: str) -> dict[str, Any]:
@@ -39,94 +33,15 @@ def _extract_json(text: str) -> dict[str, Any]:
 
 
 def _extract_student_names(question: str) -> list[str]:
-    q = question.lower()
-    return [name for name in STUDENT_NAMES if name.lower() in q]
+    return extract_student_names(question)
 
 
 def _heuristic_sql(question: str) -> str:
-    q = question.lower()
-    student_names = _extract_student_names(question)
-
-    if student_names:
-        student_name = student_names[0].replace("'", "''")
-        return f"""
-        SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
-               risk_level, risk_reasons, scholarship_candidate
-        FROM student_risk_summary
-        WHERE student_name = '{student_name}'
-        """
-
-    if "attendance" in q and ("trend" in q or "chart" in q or "month" in q):
-        return """
-        SELECT t.student_name, t.month, t.attendance_pct
-        FROM attendance_trend t
-        JOIN student_risk_summary r ON r.student_id = t.student_id AND r.term = t.term
-        WHERE r.risk_level = 'high'
-        ORDER BY t.student_name, t.month
-        """
-
-    if "scholarship" in q:
-        return """
-        SELECT student_name, program, avg_score, attendance_pct, balance_due, scholarship_candidate
-        FROM student_risk_summary
-        WHERE scholarship_candidate = 1
-        ORDER BY avg_score DESC
-        """
-
-    if "course" in q or "average" in q or "weak" in q or "grade" in q:
-        return """
-        SELECT course_id, course_name, enrolled_students, avg_score, avg_attendance_pct
-        FROM course_performance_summary
-        ORDER BY avg_score ASC
-        """
-
-    if "fee" in q or "balance" in q or "financial" in q:
-        return """
-        SELECT student_name, term, total_due, amount_paid, balance_due, status
-        FROM fee_summary
-        ORDER BY balance_due DESC
-        """
-
-    if "at risk" in q or "risk" in q:
-        return """
-        SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
-               risk_level, risk_reasons, scholarship_candidate
-        FROM student_risk_summary
-        WHERE risk_level IN ('high', 'medium')
-        ORDER BY
-            CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
-            avg_score ASC
-        """
-
-    return """
-    SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,
-           risk_level, risk_reasons, scholarship_candidate
-    FROM student_risk_summary
-    ORDER BY
-        CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
-        avg_score ASC
-    """
+    return heuristic_sql(question)
 
 
 def _needs_graph_heuristic(question: str) -> bool:
-    q = question.lower()
-    return any(
-        word in q
-        for word in [
-            "policy",
-            "policies",
-            "intervention",
-            "advising",
-            "why",
-            "explain",
-            "risk factor",
-            "risk factors",
-            "recommend",
-            "support",
-            "scholarship",
-            "irregular attendance",
-        ]
-    )
+    return needs_graph_heuristic(question)
 
 
 def _is_no_tools_request(question: str) -> bool:
@@ -305,18 +220,6 @@ def decompose_query_request(plan: dict[str, Any]) -> list[dict[str, str]]:
     return steps
 
 
-def _graph_topic_terms(question: str) -> list[str]:
-    q = question.lower()
-    terms: list[str] = []
-    if "irregular attendance" in q:
-        terms.append("Irregular Attendance")
-    if "financial hold" in q or "balance due" in q:
-        terms.append("Balance Due Greater Than 500")
-    if "scholarship" in q:
-        terms.append("Scholarship Support Policy")
-    return terms
-
-
 def get_graph_evidence(question: str, graph_query: str) -> dict[str, Any]:
     student_names = _extract_student_names(question) or _extract_student_names(graph_query)
     evidence: dict[str, Any] = {
@@ -335,7 +238,7 @@ def get_graph_evidence(question: str, graph_query: str) -> dict[str, Any]:
                 }
             )
 
-        for term in _graph_topic_terms(question):
+        for term in graph_topic_terms(question):
             evidence["topic_matches"].append(search_graph_context(term))
 
         if not evidence["students"] and not evidence["topic_matches"]:

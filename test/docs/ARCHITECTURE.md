@@ -79,5 +79,8 @@ python test/scripts/build_fixtures.py   # when fixtures needed
 
 ## Out of scope
 
+- Chroma / vector retrieval in the deterministic agent
+- **ETL / data quality testing** — planned; see [ETL_DATA_QUALITY_PLAN.md](../../docs/ETL_DATA_QUALITY_PLAN.md) (draft for review)
+
 - `eval/student_questions.json` + `eval_student_run.py` — legacy full-agent batch eval at repo root (unchanged).
 - `student-lmstudio-agent` — separate tool-calling loop; optional future suite.

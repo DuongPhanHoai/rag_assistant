@@ -152,7 +152,7 @@ For detailed setup, tool behavior, and troubleshooting, see `docs/LMSTUDIO_CHAT_
 
 For terminal commands and validation steps, see `docs/CLI_GUIDE.md`.
 
-For Cursor Chat MCP setup, see `docs/CURSOR_CHAT_MCP_GUIDE.md`.
+For Cursor Chat MCP setup, see `docs/CURSOR_CHAT_MCP_GUIDE.md`. MCP modes (`proxy` vs `tools`): `docs/MCP_MODES.md`.
 
 For testing the Python API tool loop, see `docs/API_TESTING_GUIDE.md`.
 

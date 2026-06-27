@@ -2,6 +2,8 @@
 
 This guide explains how to run the Student Management MCP server on one machine and connect to it from Cursor or LM Studio on another machine.
 
+**MCP modes:** The remote server supports both `proxy` and `tools` modes. See [MCP_MODES.md](MCP_MODES.md). Set mode when starting the server (`--mode proxy` or `--mode tools`); clients use the same URL either way.
+
 ## 1. When To Use Remote MCP
 
 Use remote MCP when:
@@ -13,17 +15,19 @@ Use remote MCP when:
 Recommended setup:
 
 ```text
-Machine A: structured-data MCP server
+Machine A: MCP server + data
   - D:\rag_assistant
   - student_management.sqlite
-  - remote MCP server
+  - Neo4j (for graph tools / proxy agent)
+  - LM Studio (required for proxy mode when LLM_ONLINE_MODE=true)
+  - remote MCP server (HTTP/SSE)
 
 Machine B: chat client
   - Cursor or LM Studio
   - connects to Machine A over HTTP/SSE MCP
 ```
 
-MCP reads `student_management.sqlite` only on Machine A.
+MCP reads SQLite and Neo4j on Machine A only.
 
 ## 2. Start The Server On Machine A
 
@@ -33,7 +37,27 @@ From the project root:
 cd D:\rag_assistant
 pip install -r requirements.txt
 python scripts/build_student_db.py
+python scripts/build_student_kg.py
 ```
+
+### Mode 2 — tools (default): schema + SQL/graph tools
+
+Host model on Machine B plans queries; Machine A runs tools:
+
+```powershell
+python scripts/run_student_mcp_http_server.py --host 0.0.0.0 --port 8765 --mode tools --transport streamable-http --unsafe-disable-dns-rebinding-protection
+```
+
+### Mode 1 — proxy: forward to CLI agent on Machine A
+
+Machine A runs the full agent pipeline (needs LM Studio when `LLM_ONLINE_MODE=true`):
+
+```powershell
+$env:LLM_ONLINE_MODE = "true"
+python scripts/run_student_mcp_http_server.py --host 0.0.0.0 --port 8765 --mode proxy --transport streamable-http --unsafe-disable-dns-rebinding-protection
+```
+
+### Legacy (same as --mode tools)
 
 Start streamable HTTP MCP:
 
@@ -44,10 +68,13 @@ python scripts/run_student_mcp_http_server.py --host 0.0.0.0 --port 8765 --trans
 Wait until you see:
 
 ```text
-INFO:     Uvicorn running on http://0.0.0.0:8765
+Student Management MCP (remote) — mode=tools
+Listening: http://0.0.0.0:8765/mcp
 Health check: http://192.168.x.x:8765/health
-LM Studio mcp.json url: http://192.168.x.x:8765/mcp
+Client mcp.json url: http://192.168.x.x:8765/mcp
 ```
+
+Confirm mode via health check — response includes `"mcp_mode": "tools"` or `"proxy"`.
 
 The first startup can take 20–40 seconds while Python loads dependencies.
 

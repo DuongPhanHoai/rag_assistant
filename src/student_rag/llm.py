@@ -13,11 +13,11 @@ LMSTUDIO_MODEL = os.getenv("LMSTUDIO_MODEL", "lmstudio")
 LMSTUDIO_TIMEOUT_SECONDS = float(os.getenv("LMSTUDIO_TIMEOUT_SECONDS", "10"))
 
 
-def get_llm() -> ChatOpenAI:
+def get_llm(timeout: float | None = None) -> ChatOpenAI:
     return ChatOpenAI(
         base_url=LMSTUDIO_BASE_URL,
         api_key="not-needed",
         model=LMSTUDIO_MODEL,
         temperature=0,
-        timeout=LMSTUDIO_TIMEOUT_SECONDS,
+        timeout=timeout if timeout is not None else LMSTUDIO_TIMEOUT_SECONDS,
     )

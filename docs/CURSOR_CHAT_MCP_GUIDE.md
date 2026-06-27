@@ -23,6 +23,8 @@ python scripts/build_student_kg.py
 
 MCP reads SQLite and Neo4j graph tools when the knowledge graph is built. Policy thresholds and intervention rules come from `data/student_management/*.csv`; edit those CSV files and rerun both build scripts after policy changes.
 
+**Two MCP modes:** see [MCP_MODES.md](MCP_MODES.md) — `proxy` (forward to CLI agent) or `tools` (schema + low-level tools, default).
+
 ## 2. MCP Server Command
 
 For Cursor, use the launcher script:
