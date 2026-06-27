@@ -123,6 +123,8 @@ drone usage policy        # when policy not in sources
 
 ## Model evaluation
 
+See [MODEL_EVALUATION.md](MODEL_EVALUATION.md) for full scope, per-suite metrics, weighted scoring, and gaps vs global LLM benchmarks.
+
 ### Full suite (automated pass/fail matrix)
 
 ```powershell
@@ -146,15 +148,17 @@ Outputs:
 | File | Purpose |
 |------|---------|
 | `test/results/hallucination_eval_history.csv` | Pass/fail matrix — one column per `{LMSTUDIO_MODEL} @ {timestamp}` run |
-| `test/results/hallucination_eval_answers.csv` | **Answer log** — `review_text` plus empty `human_verdict` / `human_notes` columns |
+| `test/results/hallucination_eval_answers.csv` | **Answer log** — `raw_answer`, `failure_summary`, `review_text`, `human_verdict`, `human_notes` |
+| `test/results/hallucination_reviews/*.md` | **Readable report** — full raw answers per run (no CSV wrapping) |
 | `test/results/hallucination_eval_runs.csv` | Run metadata (model, counts, duration) |
 
 **Human review workflow:**
 
-1. Run eval for model A → open `hallucination_eval_answers.csv`
-2. Read `review_text`; fill `human_verdict` (`pass` / `fail` / `partial`) and `human_notes`
-3. Change `LMSTUDIO_MODEL`, run again → new rows appended
-4. Filter by `case_id` to compare `review_text` across `run_column` values
+1. Run eval for model A → open `hallucination_reviews/{model}@{timestamp}.md` **or** the CSV `raw_answer` column
+2. For **failed** rows, read `failure_summary` first — it explains automated checks vs real hallucination
+3. Read `raw_answer`; fill `human_verdict` (`pass` / `fail` / `partial`) and `human_notes`
+4. Change `LMSTUDIO_MODEL`, run again → new rows appended
+5. Filter by `case_id` to compare `raw_answer` across `run_column` values
 
 Manifest: [../hallucination_cases.json](../hallucination_cases.json)
 

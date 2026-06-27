@@ -20,6 +20,7 @@ test/
     evaluators.py              ← per-suite evaluation
   docs/
     ARCHITECTURE.md
+    MODEL_EVALUATION.md        ← comparing LLMs: scope, metrics, weighted score
     SHARED_RUBRICS.md
     planning.md … integration.md
   planning/cases.json          (19 cases)
@@ -62,6 +63,8 @@ Full CLI, prerequisites, layers, and troubleshooting: **[RUNNING_TESTS.md](RUNNI
 
 ### Model comparison (CSV history)
 
+**Guide:** [docs/MODEL_EVALUATION.md](docs/MODEL_EVALUATION.md) — what the suite measures, gaps, weighted scoring.
+
 Run **all 49 cases** for the current `LMSTUDIO_MODEL` and append a column to the history matrix:
 
 ```powershell
@@ -77,6 +80,8 @@ Outputs:
 - `test/results/model_eval_runs.csv` — one row per run with aggregate pass/fail/skip counts
 
 Switch `LMSTUDIO_MODEL` in `.env` and re-run to build comparison columns side-by-side.
+
+Hallucination-focused runs with full answers for human review: [docs/HALLUCINATION_CASES.md](docs/HALLUCINATION_CASES.md) · `python test/run_hallucination_eval.py`
 
 ---
 

@@ -40,6 +40,8 @@ python test/run_eval.py [options]
 
 ### Model evaluation (full run + CSV history)
 
+**Scope and scoring:** [docs/MODEL_EVALUATION.md](docs/MODEL_EVALUATION.md)
+
 Single trigger to run **all cases** and record results for model comparison:
 
 ```powershell
@@ -209,7 +211,9 @@ test/results/kg_results.jsonl
 test/results/integration_results.jsonl
 ```
 
-Fields include `run_id`, `status` (`pass` / `fail` / `skip`), `duration_seconds`, `failures`, and suite-specific payloads. JSONL files under `results/` are gitignored.
+Fields include `run_id`, `status` (`pass` / `fail` / `skip`), `duration_seconds`, `failures`, and suite-specific payloads.
+
+**Git:** `test/results/` is **gitignored** (local eval output only). Keep CSV/JSONL on your machine for model comparison; do not commit. Only `.gitkeep` is tracked.
 
 ### Model evaluation history (CSV)
 
@@ -245,12 +249,14 @@ Use **`run_hallucination_eval.py`** when comparing **answer content** with human
 | File | Purpose |
 |------|---------|
 | `test/results/hallucination_eval_history.csv` | Pass/fail matrix (hallucination cases only) |
-| `test/results/hallucination_eval_answers.csv` | Full `review_text` per case + `human_verdict` / `human_notes` columns |
+| `test/results/hallucination_eval_answers.csv` | Full `raw_answer` per case + `failure_summary` + `human_verdict` / `human_notes` |
+| `test/results/hallucination_reviews/*.md` | Markdown report — easiest way to read failed cases |
 | `test/results/hallucination_eval_runs.csv` | Run metadata |
 
 ```powershell
 python test/run_hallucination_eval.py
-# Change LMSTUDIO_MODEL and re-run; compare review_text for same case_id across runs
+# Open test/results/hallucination_reviews/ for full raw answers
+# Compare raw_answer column for same case_id across runs
 ```
 
 ---

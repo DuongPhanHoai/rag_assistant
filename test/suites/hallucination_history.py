@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ MANIFEST_PATH = TEST_DIR / "hallucination_cases.json"
 HISTORY_CSV = RESULTS_DIR / "hallucination_eval_history.csv"
 ANSWERS_CSV = RESULTS_DIR / "hallucination_eval_answers.csv"
 RUNS_CSV = RESULTS_DIR / "hallucination_eval_runs.csv"
+REVIEWS_DIR = RESULTS_DIR / "hallucination_reviews"
 
 FIXED_COLUMNS = (
     "registry_id",
@@ -52,6 +54,8 @@ ANSWERS_COLUMNS = (
     "status",
     "duration_seconds",
     "auto_failures",
+    "failure_summary",
+    "raw_answer",
     "review_text",
     "human_verdict",
     "human_notes",
@@ -63,21 +67,126 @@ class HallucinationHistoryUpdate:
     history_path: Path
     answers_path: Path
     runs_path: Path
+    reviews_dir: Path
     run_column: str
     rows_written: int
     answers_written: int
+    review_markdown_paths: list[Path]
 
 
 def load_hallucination_manifest() -> list[dict[str, Any]]:
     return load_json(MANIFEST_PATH)
 
 
+def extract_raw_answer(record: dict[str, Any]) -> str:
+    """Primary text a human reads — full LLM answer without truncation."""
+    answer = record.get("answer")
+    if answer:
+        return str(answer).strip()
+
+    nested = record.get("result")
+    if isinstance(nested, dict) and nested.get("answer"):
+        return str(nested["answer"]).strip()
+
+    plan = record.get("plan")
+    if plan and not record.get("answer"):
+        layer = record.get("layer") or ""
+        if layer == "plan":
+            return json.dumps(plan, ensure_ascii=False, indent=2)
+
+    graph_artifact = record.get("graph_artifact") or {}
+    if graph_artifact.get("markdown"):
+        return str(graph_artifact["markdown"]).strip()
+
+    return ""
+
+
+def build_failure_summary(record: dict[str, Any]) -> str:
+    failures = record.get("failures") or []
+    if not failures:
+        return ""
+
+    status = record.get("status")
+    if status == "skip":
+        return "; ".join(failures)
+
+    parts: list[str] = []
+    for failure in failures:
+        lowered = failure.lower()
+        if "missing required phrase" in lowered:
+            parts.append(
+                f"Automated check: answer did not contain required text ({failure.split(':', 1)[-1].strip()}). "
+                "This may mean retrieval returned no evidence, not that the model hallucinated."
+            )
+        elif "missing expected source" in lowered:
+            parts.append(
+                f"Automated check: cited sources missing ({failure.split(':', 1)[-1].strip()}). "
+                "Graph/SQL may have returned empty evidence."
+            )
+        elif "must_not_include" in lowered or "forbidden phrase" in lowered:
+            parts.append(f"Possible hallucination: {failure}")
+        else:
+            parts.append(failure)
+
+    plan = record.get("plan") or {}
+    if plan.get("needs_graph") and not _has_graph_evidence(record):
+        parts.append(
+            "Context: planner requested graph lookup but graph evidence appears empty — "
+            "model may correctly refuse to invent a threshold."
+        )
+    if plan.get("needs_sql") and not _has_sql_rows(record):
+        parts.append("Context: planner requested SQL but no SQL rows were returned.")
+
+    return " | ".join(parts)
+
+
+def _has_graph_evidence(record: dict[str, Any]) -> bool:
+    graph_artifact = record.get("graph_artifact") or {}
+    if graph_artifact.get("path_rows") or graph_artifact.get("risk_rows"):
+        return True
+    if str(graph_artifact.get("markdown") or "").strip():
+        return True
+    graph_context = record.get("graph_context") or {}
+    if graph_context.get("students") or graph_context.get("topic_matches"):
+        return True
+    return False
+
+
+def _has_sql_rows(record: dict[str, Any]) -> bool:
+    sql_result = record.get("sql_result") or {}
+    return bool(sql_result.get("rows"))
+
+
+def _should_show_table_artifact(record: dict[str, Any], artifact: dict[str, Any]) -> bool:
+    markdown = str(artifact.get("markdown") or "").strip()
+    if not markdown or markdown == "No rows returned.":
+        plan = record.get("plan") or {}
+        if not plan.get("needs_sql", True):
+            return False
+        if not _has_sql_rows(record):
+            return False
+    return bool(markdown)
+
+
 def extract_review_payload(record: dict[str, Any]) -> str:
     sections: list[str] = []
 
-    answer = record.get("answer")
+    failures = record.get("failures") or []
+    if failures:
+        sections.append("=== WHY THIS FAILED (automated) ===\n" + "\n".join(f"- {item}" for item in failures))
+        summary = build_failure_summary(record)
+        if summary:
+            sections.append(f"=== INTERPRETATION ===\n{summary}")
+
+    must_not = record.get("must_not_happen")
+    if must_not:
+        sections.append(f"=== GUARDRAIL (must not happen) ===\n{must_not}")
+
+    answer = extract_raw_answer(record)
     if answer:
-        sections.append(f"=== ANSWER ===\n{answer}")
+        sections.append(f"=== RAW ANSWER (full text) ===\n{answer}")
+    else:
+        sections.append("=== RAW ANSWER ===\n(no LLM answer text — deterministic or plan-only case)")
 
     plan = record.get("plan")
     if plan:
@@ -88,37 +197,118 @@ def extract_review_payload(record: dict[str, Any]) -> str:
         sections.append(f"=== SQL ===\n{sql}")
 
     sql_result = record.get("sql_result")
-    if isinstance(sql_result, dict) and sql_result.get("rows"):
-        sections.append(
-            "=== SQL RESULT ===\n"
-            f"row_count={sql_result.get('row_count', len(sql_result.get('rows') or []))}\n"
-            f"columns={sql_result.get('columns')}"
-        )
+    if isinstance(sql_result, dict):
+        if sql_result.get("error"):
+            sections.append(f"=== SQL ERROR ===\n{sql_result['error']}")
+        elif sql_result.get("rows"):
+            sections.append(
+                "=== SQL RESULT ===\n"
+                f"row_count={sql_result.get('row_count', len(sql_result.get('rows') or []))}\n"
+                f"columns={sql_result.get('columns')}"
+            )
 
     artifact = record.get("artifact") or {}
-    if artifact.get("markdown"):
+    if _should_show_table_artifact(record, artifact):
         sections.append(f"=== TABLE ARTIFACT ===\n{artifact['markdown']}")
     elif artifact.get("type") == "chart":
         sections.append(f"=== CHART ARTIFACT ===\n{json.dumps(artifact.get('chart_spec'), ensure_ascii=False, indent=2)}")
 
     graph_artifact = record.get("graph_artifact") or {}
-    if graph_artifact.get("markdown"):
-        sections.append(f"=== GRAPH ARTIFACT ===\n{graph_artifact['markdown']}")
+    graph_markdown = str(graph_artifact.get("markdown") or "").strip()
+    if graph_markdown:
+        sections.append(f"=== GRAPH EVIDENCE ===\n{graph_markdown}")
+    elif plan and plan.get("needs_graph"):
+        sections.append(
+            "=== GRAPH EVIDENCE ===\n(empty — Neo4j returned no policy paths or topic matches for this query)"
+        )
+    elif record.get("graph_context") is not None:
+        sections.append("=== GRAPH EVIDENCE ===\n(empty)")
 
     sources = record.get("sources")
     if sources:
         sections.append(f"=== SOURCES ===\n{', '.join(sources)}")
+    elif plan and (plan.get("needs_graph") or plan.get("needs_sql")):
+        sections.append("=== SOURCES ===\n(none returned)")
 
-    result = record.get("result")
-    if isinstance(result, dict):
-        nested = extract_review_payload(result)
-        if nested and nested != "(no review payload captured)":
-            sections.append(nested)
-
-    if not sections and record.get("failures"):
-        sections.append(f"=== FAILURES ===\n" + "\n".join(f"- {item}" for item in record["failures"]))
+    nested = record.get("result")
+    if isinstance(nested, dict) and not record.get("answer"):
+        nested_payload = extract_review_payload({**record, **nested, "result": None})
+        if nested_payload and nested_payload != "(no review payload captured)":
+            sections.append(f"=== FULL RUN RESULT ===\n{nested_payload}")
 
     return "\n\n".join(sections) if sections else "(no review payload captured)"
+
+
+def _sanitize_filename(value: str) -> str:
+    cleaned = re.sub(r"[^\w\-@.+]", "_", value)
+    return cleaned[:140]
+
+
+def write_review_markdown(
+    run_column: str,
+    model: str,
+    records: list[dict[str, Any]],
+) -> list[Path]:
+    REVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+    path = REVIEWS_DIR / f"{_sanitize_filename(run_column)}.md"
+
+    lines = [
+        f"# Hallucination eval — {run_column}",
+        "",
+        f"- **Model:** `{model}`",
+        f"- **Cases:** {len(records)}",
+        "",
+        "Open this file to read **full raw answers** without CSV column wrapping.",
+        "",
+        "---",
+        "",
+    ]
+
+    for record in records:
+        case_id = record.get("id") or ""
+        suite = record.get("suite") or ""
+        status = str(record.get("status") or "fail").upper()
+        lines.extend(
+            [
+                f"## {suite}/{case_id} — {status}",
+                "",
+                f"**Question:** {record.get('question') or ''}",
+                "",
+                f"**Hallucination type:** {record.get('hallucination_type') or ''}",
+                "",
+                f"**Must not happen:** {record.get('must_not_happen') or ''}",
+                "",
+            ]
+        )
+        failures = record.get("failures") or []
+        if failures:
+            lines.append("**Automated failures:**")
+            lines.extend(f"- {item}" for item in failures)
+            lines.append("")
+            summary = build_failure_summary(record)
+            if summary:
+                lines.extend([f"**Interpretation:** {summary}", ""])
+
+        raw = extract_raw_answer(record)
+        lines.extend(
+            [
+                "### Raw answer",
+                "",
+                raw if raw else "_(no LLM answer — see evidence in review_text / JSONL)_",
+                "",
+                "### Full review bundle",
+                "",
+                "```text",
+                extract_review_payload(record),
+                "```",
+                "",
+                "---",
+                "",
+            ]
+        )
+
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return [path]
 
 
 def _manifest_templates() -> dict[tuple[str, str], dict[str, str]]:
@@ -217,6 +407,7 @@ def append_hallucination_eval_run(
             key = (str(record.get("suite") or ""), str(record.get("id") or ""))
             template = templates.get(key, {})
             failures = record.get("failures") or []
+            raw_answer = extract_raw_answer(record)
             writer.writerow(
                 {
                     "run_column": run_column,
@@ -232,12 +423,16 @@ def append_hallucination_eval_run(
                     "status": record.get("status") or "fail",
                     "duration_seconds": str(record.get("duration_seconds") or ""),
                     "auto_failures": " | ".join(failures),
+                    "failure_summary": build_failure_summary(record),
+                    "raw_answer": raw_answer,
                     "review_text": extract_review_payload(record),
                     "human_verdict": "",
                     "human_notes": "",
                 }
             )
             answers_written += 1
+
+    review_paths = write_review_markdown(run_column, model, records)
 
     passed = sum(1 for record in records if record.get("status") == "pass")
     failed = sum(1 for record in records if record.get("status") == "fail")
@@ -268,7 +463,9 @@ def append_hallucination_eval_run(
         history_path=HISTORY_CSV,
         answers_path=ANSWERS_CSV,
         runs_path=RUNS_CSV,
+        reviews_dir=REVIEWS_DIR,
         run_column=run_column,
         rows_written=len(ordered_keys),
         answers_written=answers_written,
+        review_markdown_paths=review_paths,
     )

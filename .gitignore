@@ -2,7 +2,8 @@ __pycache__/
 *.egg-info/
 /.idea/
 /eval/student_results.jsonl
-/test/results/*.jsonl
+/test/results/*
+!/test/results/.gitkeep
 /student_management.sqlite
 /.cursor/
 *.pyc

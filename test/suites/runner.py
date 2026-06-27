@@ -305,9 +305,13 @@ def run_hallucination_eval(verbose: bool = True) -> int:
     if verbose:
         print(f"\nHistory column added: {update.run_column}")
         print(f"Status matrix: {update.history_path} ({update.rows_written} rows)")
-        print(f"Answer log:    {update.answers_path} (+{update.answers_written} rows for human review)")
+        print(f"Answer log:    {update.answers_path} (+{update.answers_written} rows)")
+        print(f"Human reviews: {update.reviews_dir}/")
+        for review_path in update.review_markdown_paths:
+            print(f"  → {review_path}")
         print(f"Run log:       {update.runs_path}")
-        print("\nFill human_verdict / human_notes in the answer log CSV after reviewing review_text.")
+        print("\nColumns: raw_answer (full text), failure_summary, review_text")
+        print("Fill human_verdict / human_notes in the answer log CSV after review.")
 
     return summary.exit_code
 

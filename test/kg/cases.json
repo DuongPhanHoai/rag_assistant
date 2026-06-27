@@ -50,5 +50,15 @@
       "must_include": ["75"],
       "sources_must_contain": ["policies"]
     }
+  },
+  {
+    "id": "attendance_followup_pipeline_passed_gemma12b",
+    "techniques": ["DT", "EP", "BR"],
+    "layer": "pipeline",
+    "question": "For irregular attendance, what exact attendance percentage requires advisor follow-up?",
+    "expected": {
+      "must_include": ["75"],
+      "sources_must_contain": ["policies"]
+    }
   }
 ]

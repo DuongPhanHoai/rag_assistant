@@ -295,6 +295,7 @@ def evaluate_kg(case: dict[str, Any]) -> dict[str, Any]:
             "plan": result.get("plan"),
             "artifact": result.get("artifact"),
             "graph_artifact": result.get("graph_artifact"),
+            "graph_context": result.get("graph_context"),
             "sql_result": result.get("sql_result"),
         }
 
