@@ -123,13 +123,40 @@ drone usage policy        # when policy not in sources
 
 ## Model evaluation
 
-All hallucination cases are included in the **full model eval** run:
+### Full suite (automated pass/fail matrix)
 
 ```powershell
 python test/run_model_eval.py
 ```
 
-Results append to `test/results/model_eval_history.csv` — compare pass/fail per case across `LMSTUDIO_MODEL` runs. Hallucination cases are high-signal columns for model comparison.
+Results: `test/results/model_eval_history.csv`
+
+### Hallucination suite (human review + history)
+
+Run **only anti-hallucination cases** and capture full **answers / evidence** for manual comparison across models:
+
+```powershell
+python test/run_hallucination_eval.py
+# or
+python test/run_eval.py --hallucination-eval
+```
+
+Outputs:
+
+| File | Purpose |
+|------|---------|
+| `test/results/hallucination_eval_history.csv` | Pass/fail matrix — one column per `{LMSTUDIO_MODEL} @ {timestamp}` run |
+| `test/results/hallucination_eval_answers.csv` | **Answer log** — `review_text` plus empty `human_verdict` / `human_notes` columns |
+| `test/results/hallucination_eval_runs.csv` | Run metadata (model, counts, duration) |
+
+**Human review workflow:**
+
+1. Run eval for model A → open `hallucination_eval_answers.csv`
+2. Read `review_text`; fill `human_verdict` (`pass` / `fail` / `partial`) and `human_notes`
+3. Change `LMSTUDIO_MODEL`, run again → new rows appended
+4. Filter by `case_id` to compare `review_text` across `run_column` values
+
+Manifest: [../hallucination_cases.json](../hallucination_cases.json)
 
 ---
 
@@ -152,4 +179,4 @@ Results append to `test/results/model_eval_history.csv` — compare pass/fail pe
 
 | Date | Change |
 |------|--------|
-| 2026-06-27 | Initial registry; verified against `cases.json` and suite specs |
+| 2026-06-27 | Hallucination eval runner + answer log CSV for human model comparison |

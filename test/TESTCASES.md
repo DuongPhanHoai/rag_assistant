@@ -108,6 +108,8 @@ Shared rubrics, schema, fixtures: [docs/SHARED_RUBRICS.md](docs/SHARED_RUBRICS.m
 
 Anti-hallucination registry (verified case list): [docs/HALLUCINATION_CASES.md](docs/HALLUCINATION_CASES.md)
 
+Human review eval: `python test/run_hallucination_eval.py` → `test/results/hallucination_eval_answers.csv`
+
 ---
 
 ## kg vs graph (summary)

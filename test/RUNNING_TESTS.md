@@ -50,6 +50,18 @@ python test/run_eval.py --model-eval
 
 Reads `LMSTUDIO_MODEL` from `.env`, runs every case across all six suites, and appends a new column to the history CSV. Re-run after changing the model to compare side-by-side.
 
+### Hallucination evaluation (human review)
+
+Run only anti-hallucination cases and log full answers for manual model comparison:
+
+```powershell
+python test/run_hallucination_eval.py
+# or
+python test/run_eval.py --hallucination-eval
+```
+
+See [docs/HALLUCINATION_CASES.md](docs/HALLUCINATION_CASES.md) and `hallucination_eval_answers.csv`.
+
 Legacy wrappers delegate to the same runner:
 
 ```powershell
@@ -178,6 +190,7 @@ python test/run_eval.py --case offline_mode
 | `--layer <name>` | Filter by case `layer` |
 | `--no-llm-only` | Run only cases that do not require `LLM_ONLINE_MODE=true` |
 | `--model-eval` | Run all cases and append to `model_eval_history.csv` (same as `run_model_eval.py`) |
+| `--hallucination-eval` | Hallucination cases + answer log for human review (same as `run_hallucination_eval.py`) |
 
 Exit code: **0** if no failures; **1** if any case failed or no case matched filters. Skipped LLM cases do not fail the run.
 
@@ -223,6 +236,21 @@ python test/run_model_eval.py
 python test/run_model_eval.py
 
 # 3. Open model_eval_history.csv — each model run is a column
+```
+
+### Hallucination evaluation history (CSV)
+
+Use **`run_hallucination_eval.py`** when comparing **answer content** with human review:
+
+| File | Purpose |
+|------|---------|
+| `test/results/hallucination_eval_history.csv` | Pass/fail matrix (hallucination cases only) |
+| `test/results/hallucination_eval_answers.csv` | Full `review_text` per case + `human_verdict` / `human_notes` columns |
+| `test/results/hallucination_eval_runs.csv` | Run metadata |
+
+```powershell
+python test/run_hallucination_eval.py
+# Change LMSTUDIO_MODEL and re-run; compare review_text for same case_id across runs
 ```
 
 ---
