@@ -1,0 +1,101 @@
+{
+  "type": "chart",
+  "chart_spec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "description": "Create a chart of attendance trend by month for at-risk students.",
+    "data": {
+      "values": [
+        {
+          "student_name": "Carlos Reyes",
+          "month": "2026-01",
+          "attendance_pct": 56.25
+        },
+        {
+          "student_name": "Carlos Reyes",
+          "month": "2026-02",
+          "attendance_pct": 62.5
+        },
+        {
+          "student_name": "Carlos Reyes",
+          "month": "2026-03",
+          "attendance_pct": 50.0
+        },
+        {
+          "student_name": "Lina Garcia",
+          "month": "2026-01",
+          "attendance_pct": 81.25
+        },
+        {
+          "student_name": "Lina Garcia",
+          "month": "2026-02",
+          "attendance_pct": 68.75
+        },
+        {
+          "student_name": "Lina Garcia",
+          "month": "2026-03",
+          "attendance_pct": 62.5
+        },
+        {
+          "student_name": "Minh Nguyen",
+          "month": "2026-01",
+          "attendance_pct": 81.25
+        },
+        {
+          "student_name": "Minh Nguyen",
+          "month": "2026-02",
+          "attendance_pct": 81.25
+        },
+        {
+          "student_name": "Minh Nguyen",
+          "month": "2026-03",
+          "attendance_pct": 68.75
+        },
+        {
+          "student_name": "Noah Patel",
+          "month": "2026-01",
+          "attendance_pct": 93.75
+        },
+        {
+          "student_name": "Noah Patel",
+          "month": "2026-02",
+          "attendance_pct": 81.25
+        },
+        {
+          "student_name": "Noah Patel",
+          "month": "2026-03",
+          "attendance_pct": 68.75
+        },
+        {
+          "student_name": "Owen Smith",
+          "month": "2026-01",
+          "attendance_pct": 68.75
+        },
+        {
+          "student_name": "Owen Smith",
+          "month": "2026-02",
+          "attendance_pct": 56.25
+        },
+        {
+          "student_name": "Owen Smith",
+          "month": "2026-03",
+          "attendance_pct": 50.0
+        }
+      ]
+    },
+    "mark": "line",
+    "encoding": {
+      "x": {
+        "field": "month",
+        "type": "ordinal"
+      },
+      "y": {
+        "field": "attendance_pct",
+        "type": "quantitative"
+      },
+      "color": {
+        "field": "student_name",
+        "type": "nominal"
+      }
+    }
+  }
+}

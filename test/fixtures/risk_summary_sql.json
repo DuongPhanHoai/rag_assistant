@@ -1,0 +1,74 @@
+{
+  "sql": "SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due,\n               risk_level, risk_reasons, scholarship_candidate\n        FROM student_risk_summary\n        WHERE risk_level IN ('high', 'medium')\n        ORDER BY\n            CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,\n            avg_score ASC",
+  "columns": [
+    "student_name",
+    "program",
+    "advisor",
+    "avg_score",
+    "attendance_pct",
+    "balance_due",
+    "risk_level",
+    "risk_reasons",
+    "scholarship_candidate"
+  ],
+  "rows": [
+    {
+      "student_name": "Owen Smith",
+      "program": "Software Engineering",
+      "advisor": "Prof. Malik",
+      "avg_score": 58.81,
+      "attendance_pct": 58.33,
+      "balance_due": 1100.0,
+      "risk_level": "high",
+      "risk_reasons": "low grades; low attendance; large fee balance;",
+      "scholarship_candidate": 0
+    },
+    {
+      "student_name": "Carlos Reyes",
+      "program": "Information Systems",
+      "advisor": "Prof. Malik",
+      "avg_score": 62.17,
+      "attendance_pct": 56.25,
+      "balance_due": 900.0,
+      "risk_level": "high",
+      "risk_reasons": "low grades; low attendance; large fee balance;",
+      "scholarship_candidate": 0
+    },
+    {
+      "student_name": "Lina Garcia",
+      "program": "Business Analytics",
+      "advisor": "Dr. Rivera",
+      "avg_score": 71.4,
+      "attendance_pct": 70.83,
+      "balance_due": 400.0,
+      "risk_level": "high",
+      "risk_reasons": "low attendance;",
+      "scholarship_candidate": 0
+    },
+    {
+      "student_name": "Noah Patel",
+      "program": "Software Engineering",
+      "advisor": "Prof. Chen",
+      "avg_score": 72.94,
+      "attendance_pct": 81.25,
+      "balance_due": 400.0,
+      "risk_level": "medium",
+      "risk_reasons": "",
+      "scholarship_candidate": 0
+    },
+    {
+      "student_name": "Minh Nguyen",
+      "program": "Data Analytics",
+      "advisor": "Dr. Santos",
+      "avg_score": 79.84,
+      "attendance_pct": 77.08,
+      "balance_due": 300.0,
+      "risk_level": "medium",
+      "risk_reasons": "",
+      "scholarship_candidate": 0
+    }
+  ],
+  "row_count": 5,
+  "limited": false,
+  "warnings": []
+}

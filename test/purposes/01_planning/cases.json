@@ -1,0 +1,43 @@
+[
+  {
+    "id": "plan_sql_enrollment",
+    "purpose": "01_planning",
+    "layer": "plan",
+    "question": "List all students enrolled in C101.",
+    "notes": "SQL-only routing. No graph or chart.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["enrollments"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_kg_attendance_policy",
+    "purpose": "01_planning",
+    "layer": "plan",
+    "question": "Explain the attendance policy when a student misses too many classes.",
+    "notes": "Policy explanation should route to graph or policies data, not guess.",
+    "expected": {
+      "needs_sql": false,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_execute": false
+  },
+  {
+    "id": "plan_combined_risk_intervention",
+    "purpose": "01_planning",
+    "layer": "plan",
+    "question": "Which students are currently at risk based on avg_score and what interventions do the policy documents recommend?",
+    "notes": "Combined SQL metrics + graph policy paths.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "sql_must_execute": true
+  }
+]

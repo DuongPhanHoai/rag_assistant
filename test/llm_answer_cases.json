@@ -1,0 +1,141 @@
+[
+  {
+    "id": "answer_risk_summary",
+    "question": "Which students are at risk this term and why?",
+    "notes": "Frozen SQL only. Answer step should explain high- and medium-risk students correctly.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": true,
+        "needs_graph": false,
+        "needs_chart": false,
+        "reasoning": "Fixture plan for answer-step eval."
+      },
+      "sql_result": "risk_summary_sql.json",
+      "graph_context": null,
+      "artifact": {
+        "type": "table",
+        "markdown": "See risk_summary_sql.json fixture."
+      }
+    },
+    "must_include": [
+      "Owen Smith",
+      "Carlos Reyes",
+      "Lina Garcia",
+      "Noah Patel",
+      "Minh Nguyen"
+    ],
+    "must_not_include": [
+      "no explicit triggers",
+      "no reason",
+      "no documented risk factors"
+    ]
+  },
+  {
+    "id": "answer_noah_graph",
+    "question": "What risk factors are linked to Noah Patel, and which policy and intervention path applies to irregular attendance?",
+    "notes": "Frozen graph evidence only. Answer step should state the full policy path.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": false,
+        "needs_graph": true,
+        "needs_chart": false,
+        "reasoning": "Fixture plan for answer-step eval."
+      },
+      "sql_result": null,
+      "graph_context": "noah_graph_context.json",
+      "artifact": {
+        "type": "table",
+        "markdown": "No SQL rows for this case."
+      }
+    },
+    "must_include": [
+      "Irregular Attendance",
+      "Attendance Intervention Policy",
+      "Weekly Lab Attendance"
+    ],
+    "must_not_include": []
+  },
+  {
+    "id": "answer_carlos_paths",
+    "question": "What intervention paths does the knowledge graph recommend for Carlos Reyes?",
+    "notes": "Frozen graph evidence with two policy paths.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": false,
+        "needs_graph": true,
+        "needs_chart": false,
+        "reasoning": "Fixture plan for answer-step eval."
+      },
+      "sql_result": null,
+      "graph_context": "carlos_graph_context.json",
+      "artifact": {
+        "type": "table",
+        "markdown": "No SQL rows for this case."
+      }
+    },
+    "must_include": [
+      "Financial Hold Policy",
+      "Financial Aid Review",
+      "Attendance Intervention Policy",
+      "Weekly Lab Attendance"
+    ],
+    "must_not_include": []
+  },
+  {
+    "id": "answer_hybrid_carlos",
+    "question": "Which high-risk students have the largest fee balances, and what intervention paths does the knowledge graph recommend for Carlos Reyes?",
+    "notes": "Frozen SQL plus graph evidence. Answer step should keep structured ranking separate from graph paths.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": true,
+        "needs_graph": true,
+        "needs_chart": false,
+        "reasoning": "Fixture plan for answer-step eval."
+      },
+      "sql_result": "high_risk_balances_sql.json",
+      "graph_context": "carlos_graph_context.json",
+      "artifact": {
+        "type": "table",
+        "markdown": "See high_risk_balances_sql.json fixture."
+      }
+    },
+    "must_include": [
+      "Owen Smith",
+      "Carlos Reyes",
+      "Financial Aid Review",
+      "Weekly Lab Attendance"
+    ],
+    "any_of": [
+      "structured",
+      "sqlite",
+      "metrics",
+      "balance"
+    ],
+    "must_not_include": []
+  },
+  {
+    "id": "answer_chart",
+    "question": "Create a chart of attendance trend by month for at-risk students.",
+    "notes": "Frozen chart artifact. Answer step should describe the chart axes and trends.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": true,
+        "needs_graph": false,
+        "needs_chart": true,
+        "reasoning": "Fixture plan for answer-step eval."
+      },
+      "sql_result": "attendance_trend_sql.json",
+      "graph_context": null,
+      "artifact": "attendance_chart_artifact.json"
+    },
+    "must_include": [
+      "chart",
+      "attendance"
+    ],
+    "any_of": [
+      "month",
+      "line"
+    ],
+    "must_not_include": []
+  }
+]

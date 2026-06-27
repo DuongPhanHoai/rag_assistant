@@ -1,0 +1,105 @@
+[
+  {
+    "id": "noah_irregular_attendance",
+    "techniques": ["DT", "EP", "BR"],
+    "layer": "graph_only",
+    "question": "What policy and intervention path applies to Noah Patel for irregular attendance?",
+    "graph_query": "Irregular Attendance Noah Patel",
+    "expected": {
+      "expected_paths_exact": 1,
+      "expected_path_rows": [
+        {
+          "student_name": "Noah Patel",
+          "risk_factor": "Irregular Attendance",
+          "policy": "Attendance Intervention Policy",
+          "intervention": "Weekly Lab Attendance"
+        }
+      ],
+      "sources_must_contain": ["policies"],
+      "markdown_non_empty": true
+    }
+  },
+  {
+    "id": "carlos_intervention_paths",
+    "techniques": ["DT", "EP", "BR"],
+    "layer": "graph_only",
+    "question": "What intervention paths apply to Carlos Reyes?",
+    "graph_query": "Carlos Reyes intervention paths",
+    "expected": {
+      "expected_paths_exact": 2,
+      "expected_path_rows": [
+        {
+          "student_name": "Carlos Reyes",
+          "risk_factor": "Balance Due Greater Than 500",
+          "policy": "Financial Hold Policy",
+          "intervention": "Financial Aid Review"
+        },
+        {
+          "student_name": "Carlos Reyes",
+          "risk_factor": "Irregular Attendance",
+          "policy": "Attendance Intervention Policy",
+          "intervention": "Weekly Lab Attendance"
+        }
+      ],
+      "sources_must_contain": ["policies"]
+    }
+  },
+  {
+    "id": "owen_risk_factors",
+    "techniques": ["EP"],
+    "layer": "graph_only",
+    "question": "What risk factors and paths apply to Owen Smith?",
+    "graph_query": "Owen Smith risk factors",
+    "expected": {
+      "min_path_count": 1,
+      "sources_must_contain": ["student_risk_factors"]
+    }
+  },
+  {
+    "id": "topic_irregular_attendance",
+    "techniques": ["EP"],
+    "layer": "graph_only",
+    "question": "Which students have irregular attendance risk factors?",
+    "graph_query": "Irregular Attendance",
+    "expected": {
+      "student_names_must_include": ["Noah Patel", "Carlos Reyes", "Owen Smith"]
+    }
+  },
+  {
+    "id": "path_irregular_attendance_generic",
+    "techniques": ["DT", "EP"],
+    "layer": "graph_only",
+    "question": "What policy and intervention path applies to irregular attendance?",
+    "graph_query": "Irregular Attendance policy intervention",
+    "expected": {
+      "min_path_count": 1,
+      "expected_path_rows": [
+        {
+          "risk_factor": "Irregular Attendance",
+          "policy": "Attendance Intervention Policy"
+        }
+      ]
+    }
+  },
+  {
+    "id": "unknown_student",
+    "techniques": ["EX"],
+    "layer": "graph_only",
+    "question": "What intervention path applies to Alex Unknown?",
+    "graph_query": "Alex Unknown",
+    "expected": {
+      "expected_paths_exact": 0,
+      "markdown_empty": true
+    }
+  },
+  {
+    "id": "student_no_graph_data",
+    "techniques": ["EX"],
+    "layer": "graph_only",
+    "question": "What policy path applies to Maya Tran?",
+    "graph_query": "Maya Tran policy path",
+    "expected": {
+      "expected_paths_exact": 0
+    }
+  }
+]

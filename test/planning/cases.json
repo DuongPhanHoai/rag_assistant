@@ -1,0 +1,166 @@
+[
+  {
+    "id": "sql_only_enrollment",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R1",
+    "ep_partition": "EP-SQL-ENROLL",
+    "layer": "plan",
+    "question": "List all students enrolled in C101.",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "sql_only_risk",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R1",
+    "ep_partition": "EP-SQL-RISK",
+    "layer": "plan",
+    "question": "Which students are at high risk?",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "sql_only_named_student",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R1",
+    "ep_partition": "EP-SQL-NAMED",
+    "layer": "plan",
+    "question": "What is Noah Patel's avg_score and balance_due?",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "kg_only_policy",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R2",
+    "ep_partition": "EP-KG-POLICY",
+    "layer": "plan",
+    "question": "Explain the attendance policy when a student misses too many classes.",
+    "expected": { "needs_sql": false, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "graph_only_path",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R2",
+    "ep_partition": "EP-GRAPH-PATH",
+    "layer": "plan",
+    "question": "What policy and intervention path applies to irregular attendance?",
+    "expected": { "needs_sql": false, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "combined_risk_intervention",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R5",
+    "ep_partition": "EP-HYBRID",
+    "layer": "plan",
+    "question": "Which students are at risk based on avg_score and what interventions do policy documents recommend?",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "chart_routing",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R4",
+    "ep_partition": "EP-CHART",
+    "layer": "plan",
+    "question": "Create a chart of attendance trend by month for at-risk students.",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": true }
+  },
+  {
+    "id": "hybrid_noah_path",
+    "techniques": ["DT"],
+    "dt_rule": "R3",
+    "layer": "plan",
+    "question": "What risk factors are linked to Noah Patel, and which policy and intervention path applies to irregular attendance?",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "hybrid_carlos_balance",
+    "techniques": ["DT"],
+    "dt_rule": "R3",
+    "layer": "plan",
+    "question": "Which high-risk students have the largest fee balances, and what intervention paths does the knowledge graph recommend for Carlos Reyes?",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "plan_scholarship",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R5",
+    "ep_partition": "EP-SCHOLARSHIP",
+    "layer": "plan",
+    "question": "Who qualifies for scholarship support based on avg_score, attendance, and fee status?",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "plan_course_weak",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R5",
+    "ep_partition": "EP-COURSE",
+    "layer": "plan",
+    "question": "Show average grade by course and explain weak areas.",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": false }
+  },
+  {
+    "id": "sql_only_fee_balance",
+    "techniques": ["DT", "EP"],
+    "dt_rule": "R1",
+    "ep_partition": "EP-SQL-FEE",
+    "layer": "plan",
+    "question": "Show students ordered by largest balance_due.",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "chart_plus_policy",
+    "techniques": ["DT"],
+    "dt_rule": "R6",
+    "layer": "plan",
+    "question": "Chart at-risk attendance by month and summarize the intervention policy.",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": true }
+  },
+  {
+    "id": "ambiguous_graph_word",
+    "techniques": ["EP", "EX"],
+    "dt_rule": "R4",
+    "ep_partition": "EP-AMBIG-GRAPH",
+    "layer": "plan",
+    "question": "Show a graph of monthly attendance for at-risk students.",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": true }
+  },
+  {
+    "id": "explicit_table_only",
+    "techniques": ["EX"],
+    "dt_rule": "R1",
+    "layer": "plan",
+    "question": "List at-risk students as a table only, no chart.",
+    "expected": { "needs_sql": true, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "empty_question",
+    "techniques": ["EX"],
+    "dt_rule": "R7",
+    "layer": "plan",
+    "question": "",
+    "expected": { "needs_sql": false, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "off_topic",
+    "techniques": ["EX"],
+    "dt_rule": "R7",
+    "layer": "plan",
+    "question": "What is the weather in Boston today?",
+    "expected": { "needs_sql": false, "needs_graph": false, "needs_chart": false }
+  },
+  {
+    "id": "multi_intent",
+    "techniques": ["EX"],
+    "dt_rule": "R6",
+    "layer": "plan",
+    "question": "List at-risk students and chart fee balances and explain scholarship policy.",
+    "expected": { "needs_sql": true, "needs_graph": true, "needs_chart": true }
+  },
+  {
+    "id": "no_tools_policy_explain",
+    "techniques": ["EX"],
+    "dt_rule": "R8",
+    "ep_partition": "EP-NO-TOOLS",
+    "layer": "plan",
+    "question": "Without querying any databases or tools, explain the attendance policy in plain language only.",
+    "expected": { "needs_sql": false, "needs_graph": false, "needs_chart": false }
+  }
+]

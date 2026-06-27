@@ -1,0 +1,34 @@
+[
+  {
+    "id": "sql_agg_enrollment_by_course",
+    "purpose": "02_sql_tables",
+    "layer": "pipeline",
+    "question": "Show the number of students per course as a table sorted by most popular course.",
+    "notes": "Aggregation with GROUP BY and descending count.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false,
+      "artifact_type": "table"
+    },
+    "sql_must_contain": ["enrollments"],
+    "sql_must_execute": true,
+    "must_include": ["course"]
+  },
+  {
+    "id": "sql_top_students_by_score",
+    "purpose": "02_sql_tables",
+    "layer": "pipeline",
+    "question": "List the top 3 students by avg_score with their program and advisor.",
+    "notes": "Filter, sort, and limit without inventing rows.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false,
+      "artifact_type": "table"
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "sql_must_execute": true,
+    "must_include": ["Maya Tran"]
+  }
+]

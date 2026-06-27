@@ -1,0 +1,28 @@
+{
+  "$comment": "Shared fields for all purpose case files under test/purposes/*/cases.json",
+  "case_fields": {
+    "id": "unique id within the purpose folder",
+    "purpose": "01_planning | 02_sql_tables | ...",
+    "layer": "plan | pipeline | answer | e2e",
+    "question": "natural language prompt",
+    "notes": "human-readable intent",
+    "expected": {
+      "needs_sql": "boolean, plan/pipeline/e2e",
+      "needs_graph": "boolean",
+      "needs_chart": "boolean",
+      "artifact_type": "table | chart | null"
+    },
+    "sql_must_contain": ["optional SQL fragments"],
+    "sql_must_execute": "boolean, default true when needs_sql",
+    "must_include": ["answer phrases, case-insensitive"],
+    "must_not_include": ["forbidden phrases"],
+    "any_of": ["at least one phrase required"],
+    "expected_sources": ["policies", "student_risk_factors"],
+    "fixtures": {
+      "plan": "inline plan object for answer layer",
+      "sql_result": "fixture filename or null",
+      "graph_context": "fixture filename or null",
+      "artifact": "fixture filename or inline object"
+    }
+  }
+}

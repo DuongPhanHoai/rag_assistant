@@ -1,0 +1,87 @@
+[
+  {
+    "id": "risk_summary_table",
+    "techniques": ["DT", "EP"],
+    "layer": "sql_only",
+    "question": "Which students are at high or medium risk?",
+    "sql": "SELECT student_name, program, advisor, avg_score, attendance_pct, balance_due, risk_level, risk_reasons, scholarship_candidate FROM student_risk_summary WHERE risk_level IN ('high', 'medium') ORDER BY CASE risk_level WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, avg_score ASC",
+    "expected": {
+      "sql_must_contain": ["student_risk_summary"],
+      "min_row_count": 5,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "top_by_avg_score",
+    "techniques": ["DT", "EP"],
+    "layer": "sql_only",
+    "question": "Top 3 students by average score.",
+    "sql": "SELECT student_name, avg_score FROM student_risk_summary ORDER BY avg_score DESC LIMIT 3",
+    "expected": {
+      "sql_must_contain": ["student_risk_summary", "limit"],
+      "exact_row_count": 3,
+      "row_must_include": { "student_name": "Maya Tran" },
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "enrollment_list_c101",
+    "techniques": ["DT", "EP"],
+    "layer": "sql_only",
+    "question": "List students enrolled in C101.",
+    "sql": "SELECT s.first_name || ' ' || s.last_name AS student_name, e.course_id FROM enrollments e JOIN students s ON s.student_id = e.student_id WHERE e.course_id = 'C101'",
+    "expected": {
+      "sql_must_contain": ["enrollments", "C101"],
+      "min_row_count": 1,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "scholarship_filter",
+    "techniques": ["DT", "EP"],
+    "layer": "sql_only",
+    "question": "Which students are scholarship candidates?",
+    "sql": "SELECT student_name, avg_score, attendance_pct, scholarship_candidate FROM student_risk_summary WHERE scholarship_candidate = 1",
+    "expected": {
+      "sql_must_contain": ["scholarship_candidate"],
+      "min_row_count": 1,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "fee_balance_ranking",
+    "techniques": ["DT", "EP"],
+    "layer": "sql_only",
+    "question": "Students ordered by largest balance due.",
+    "sql": "SELECT student_name, balance_due FROM student_risk_summary ORDER BY balance_due DESC",
+    "expected": {
+      "sql_must_contain": ["balance_due"],
+      "min_row_count": 5,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "invalid_sql_mutating",
+    "techniques": ["ER"],
+    "layer": "sql_only",
+    "question": "Injected mutating SQL.",
+    "sql": "DELETE FROM students",
+    "expected": {
+      "expect_validation_failure": true
+    }
+  },
+  {
+    "id": "risk_summary_pipeline",
+    "techniques": ["DT", "EP"],
+    "layer": "pipeline",
+    "question": "Which students are at high or medium risk?",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false,
+      "sql_must_contain": ["student_risk_summary"],
+      "min_row_count": 5,
+      "artifact_type": "table"
+    }
+  }
+]

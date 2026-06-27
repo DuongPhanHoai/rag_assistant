@@ -129,22 +129,93 @@ def _needs_graph_heuristic(question: str) -> bool:
     )
 
 
+def _is_no_tools_request(question: str) -> bool:
+    q = question.lower()
+    return any(
+        phrase in q
+        for phrase in [
+            "without querying",
+            "do not query",
+            "don't query",
+            "do not use any data",
+            "no tools",
+        ]
+    )
+
+
+def _normalize_plan(
+    plan: dict[str, Any],
+    *,
+    fallback_sql: str = "",
+    fallback_graph_query: str = "",
+) -> dict[str, Any]:
+    """Align sql/graph_query fields with needs_* flags (Option B planning contract)."""
+    if plan.get("needs_chart"):
+        plan["needs_sql"] = True
+
+    if plan.get("needs_sql"):
+        if not str(plan.get("sql") or "").strip():
+            plan["sql"] = fallback_sql
+    else:
+        plan["sql"] = ""
+
+    if plan.get("needs_graph"):
+        if not str(plan.get("graph_query") or "").strip():
+            plan["graph_query"] = fallback_graph_query
+    else:
+        plan["graph_query"] = ""
+
+    return plan
+
+
 def _fallback_plan(question: str) -> dict[str, Any]:
     q = question.lower()
+    if not question.strip():
+        plan = {
+            "question": question,
+            "reasoning": "Heuristic plan (LLM_ONLINE_MODE=false).",
+            "needs_sql": False,
+            "needs_graph": False,
+            "needs_chart": False,
+            "graph_query": "",
+            "student_names": [],
+            "sql": "",
+            "used_llm_plan": False,
+        }
+        return _normalize_plan(plan)
+
+    if _is_no_tools_request(question):
+        plan = {
+            "question": question,
+            "reasoning": "Heuristic plan (LLM_ONLINE_MODE=false).",
+            "needs_sql": False,
+            "needs_graph": False,
+            "needs_chart": False,
+            "graph_query": "",
+            "student_names": _extract_student_names(question),
+            "sql": "",
+            "used_llm_plan": False,
+        }
+        return _normalize_plan(plan)
+
     needs_chart = any(word in q for word in ["chart", "trend", "plot", "graph"])
     student_names = _extract_student_names(question)
-    needs_sql = bool(student_names) or not _needs_graph_heuristic(question) or needs_chart
-    return {
+    needs_graph = _needs_graph_heuristic(question)
+    needs_sql = bool(student_names) or not needs_graph or needs_chart
+    sql = _heuristic_sql(question) if needs_sql else ""
+    graph_query = question if needs_graph else ""
+    plan = {
         "question": question,
         "reasoning": "Heuristic plan (LLM_ONLINE_MODE=false).",
         "needs_sql": needs_sql,
-        "needs_graph": _needs_graph_heuristic(question),
+        "needs_graph": needs_graph,
         "needs_chart": needs_chart,
-        "graph_query": question,
+        "graph_query": graph_query,
         "student_names": student_names,
-        "sql": _heuristic_sql(question),
+        "sql": sql,
         "used_llm_plan": False,
     }
+    return _normalize_plan(plan, fallback_sql=sql, fallback_graph_query=graph_query)
 
 
 def plan_question(question: str) -> dict[str, Any]:
@@ -163,6 +234,13 @@ Return only JSON with these keys:
 - needs_chart: boolean
 - graph_query: short text to search graph context for policies, interventions, and risk factors
 - sql: a single read-only SELECT or WITH query, or an empty string
+
+Routing rules:
+- Policy or intervention explanations without student metrics: needs_graph=true, needs_sql=false, sql="".
+- Structured lists, counts, and metrics: needs_sql=true; set needs_graph=false unless policy paths are also required.
+- Charts or trends: needs_chart=true and needs_sql=true.
+- If needs_sql=false then sql must be "". If needs_graph=false then graph_query must be "".
+- If the user explicitly forbids querying databases or tools, set all needs_* flags to false.
 
 Prefer the views student_risk_summary, course_performance_summary, attendance_trend, assessment_scores,
 attendance_summary, and fee_summary when they answer the question.
@@ -185,17 +263,24 @@ Question:
 
     fallback = _fallback_plan(question)
     fallback["used_llm_plan"] = used_llm_plan
+    fallback_sql = str(fallback.get("sql") or "")
+    fallback_graph_query = str(fallback.get("graph_query") or "")
     merged_plan = {
         "question": question,
         "reasoning": str(plan.get("reasoning") or fallback["reasoning"]),
         "needs_sql": bool(plan.get("needs_sql", fallback["needs_sql"])),
         "needs_graph": bool(plan.get("needs_graph", fallback["needs_graph"])),
         "needs_chart": bool(plan.get("needs_chart", fallback["needs_chart"])),
-        "graph_query": str(plan.get("graph_query") or fallback["graph_query"]),
+        "graph_query": str(plan.get("graph_query") or fallback_graph_query),
         "student_names": _extract_student_names(question),
-        "sql": str(plan.get("sql") or fallback["sql"]),
+        "sql": str(plan.get("sql") or fallback_sql),
         "used_llm_plan": used_llm_plan,
     }
+    merged_plan = _normalize_plan(
+        merged_plan,
+        fallback_sql=fallback_sql,
+        fallback_graph_query=fallback_graph_query,
+    )
     logger.info("plan_question plan:\n%s", json.dumps(merged_plan, ensure_ascii=False, indent=2))
     return merged_plan
 

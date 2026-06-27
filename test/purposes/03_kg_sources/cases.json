@@ -1,0 +1,48 @@
+[
+  {
+    "id": "kg_scholarship_thresholds",
+    "purpose": "03_kg_sources",
+    "layer": "pipeline",
+    "question": "What is the minimum avg_score required to keep scholarship support, and what happens if a student falls below it?",
+    "notes": "Ground in Scholarship Support Policy: score 85, attendance 85%, no overdue balance.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "must_include": ["85"],
+    "expected_sources": ["policies"]
+  },
+  {
+    "id": "kg_advisor_at_risk_duties",
+    "purpose": "03_kg_sources",
+    "layer": "pipeline",
+    "question": "Summarize the main responsibilities of advisors for at-risk students according to policy documents.",
+    "notes": "Multi-source synthesis from graph or policies table.",
+    "expected": {
+      "needs_sql": false,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "any_of": ["intervention", "advisor", "risk", "policy"],
+    "expected_sources": ["policies"]
+  },
+  {
+    "id": "kg_noah_policy_path",
+    "purpose": "03_kg_sources",
+    "layer": "pipeline",
+    "question": "What risk factors are linked to Noah Patel, and which policy and intervention path applies to irregular attendance?",
+    "notes": "Named student graph path with source grounding.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "must_include": [
+      "Irregular Attendance",
+      "Attendance Intervention Policy",
+      "Weekly Lab Attendance"
+    ],
+    "expected_sources": ["policies", "student_risk_factors"]
+  }
+]

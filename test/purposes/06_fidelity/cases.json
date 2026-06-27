@@ -1,0 +1,70 @@
+[
+  {
+    "id": "fidelity_attendance_threshold",
+    "purpose": "06_fidelity",
+    "layer": "answer",
+    "question": "According to the policy documents, what exact attendance percentage requires advisor follow-up?",
+    "notes": "Conflict trap: must be 75%, not generic absences count.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": false,
+        "needs_graph": true,
+        "needs_chart": false,
+        "reasoning": "Fixture for fidelity eval."
+      },
+      "sql_result": null,
+      "graph_context": "attendance_policy_graph.json",
+      "artifact": {
+        "type": "table",
+        "markdown": "Policy graph fixture."
+      }
+    },
+    "must_include": ["75"],
+    "must_not_include": ["3 classes", "three absences", "usually"]
+  },
+  {
+    "id": "fidelity_warning_level_trap",
+    "purpose": "06_fidelity",
+    "layer": "answer",
+    "question": "Give me the list of warning_level for each student.",
+    "notes": "Schema trap: warning_level does not exist; map to risk_level or explain missing field.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": true,
+        "needs_graph": false,
+        "needs_chart": false,
+        "reasoning": "Fixture for fidelity eval."
+      },
+      "sql_result": "risk_summary_sql.json",
+      "graph_context": null,
+      "artifact": {
+        "type": "table",
+        "markdown": "See risk_summary_sql.json."
+      }
+    },
+    "any_of": ["risk_level", "does not exist", "not available", "no warning_level", "not in the schema"]
+  },
+  {
+    "id": "fidelity_risk_no_hallucination",
+    "purpose": "06_fidelity",
+    "layer": "answer",
+    "question": "Which students are at risk this term and why?",
+    "notes": "Must not claim medium-risk students have no reason.",
+    "fixtures": {
+      "plan": {
+        "needs_sql": true,
+        "needs_graph": false,
+        "needs_chart": false,
+        "reasoning": "Fixture for fidelity eval."
+      },
+      "sql_result": "risk_summary_sql.json",
+      "graph_context": null,
+      "artifact": {
+        "type": "table",
+        "markdown": "See risk_summary_sql.json."
+      }
+    },
+    "must_include": ["Owen Smith", "Noah Patel", "Minh Nguyen"],
+    "must_not_include": ["no explicit triggers", "no reason", "no documented risk factors"]
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "replan_missing_column",
+    "purpose": "05_replanning",
+    "layer": "e2e",
+    "question": "Show each student's favorite color.",
+    "notes": "Schema trap: favorite_color does not exist. Answer must not invent values.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false
+    },
+    "must_not_include": ["blue", "red", "green", "favorite color is"],
+    "any_of": ["not available", "not stored", "no such", "does not exist", "not in", "cannot"]
+  },
+  {
+    "id": "replan_future_major_change",
+    "purpose": "05_replanning",
+    "layer": "e2e",
+    "question": "Which students are planning to change their major next year?",
+    "notes": "Future intent not stored; closest answer uses current program or explains gap.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false
+    },
+    "any_of": ["not stored", "not available", "no data", "current program", "cannot determine", "do not track"]
+  },
+  {
+    "id": "replan_missing_policy_doc",
+    "purpose": "05_replanning",
+    "layer": "e2e",
+    "question": "What is the university drone usage policy on campus?",
+    "notes": "No matching indexed policy; graph/SQL should not fabricate a drone policy.",
+    "expected": {
+      "needs_sql": false,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "must_not_include": ["drone usage is prohibited", "students may fly drones"],
+    "any_of": ["not found", "no policy", "not in", "not available", "no matching", "not indexed"]
+  }
+]

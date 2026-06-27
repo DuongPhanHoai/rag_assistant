@@ -1,0 +1,68 @@
+[
+  {
+    "id": "timeseries_attendance",
+    "techniques": ["DT", "EP"],
+    "layer": "artifact_only",
+    "question": "Chart at-risk attendance by month.",
+    "fixture": "attendance_trend_sql.json",
+    "expected": {
+      "needs_chart": true,
+      "artifact_type": "chart",
+      "chart": {
+        "x_field": "month",
+        "y_field": "attendance_pct",
+        "mark": "line",
+        "min_data_points": 3
+      }
+    }
+  },
+  {
+    "id": "table_risk_summary",
+    "techniques": ["DT", "EP"],
+    "layer": "artifact_only",
+    "question": "List at-risk students as a table.",
+    "fixture": "risk_summary_sql.json",
+    "expected": {
+      "needs_chart": false,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "chart_single_month",
+    "techniques": ["BR"],
+    "layer": "artifact_only",
+    "question": "Single month chart.",
+    "fixture": {
+      "rows": [{ "student_name": "Noah Patel", "month": "2026-03", "attendance_pct": 81.25 }],
+      "columns": ["student_name", "month", "attendance_pct"]
+    },
+    "expected": {
+      "needs_chart": true,
+      "artifact_type": "chart",
+      "chart": { "x_field": "month", "y_field": "attendance_pct", "mark": "line", "min_data_points": 1 }
+    }
+  },
+  {
+    "id": "chart_no_data",
+    "techniques": ["EX", "ER"],
+    "layer": "artifact_only",
+    "question": "Chart with no rows.",
+    "fixture": { "rows": [], "columns": [] },
+    "expected": {
+      "needs_chart": true,
+      "artifact_type": "table"
+    }
+  },
+  {
+    "id": "timeseries_attendance_pipeline",
+    "techniques": ["DT", "EP"],
+    "layer": "pipeline",
+    "question": "Chart monthly attendance trends for at-risk students.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": true,
+      "artifact_type": "chart"
+    }
+  }
+]

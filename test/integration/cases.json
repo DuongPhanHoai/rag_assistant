@@ -1,0 +1,64 @@
+[
+  {
+    "id": "fidelity_medium_risk",
+    "techniques": ["BR", "EX"],
+    "layer": "fidelity",
+    "question": "Summarize medium and high risk students from the evidence.",
+    "fixture": "risk_summary_sql.json",
+    "expected": {
+      "must_include": ["Noah Patel", "Owen Smith"],
+      "must_not_include": ["no reason"]
+    }
+  },
+  {
+    "id": "fidelity_noah_paths",
+    "techniques": ["BR"],
+    "layer": "fidelity",
+    "question": "What intervention path applies to Noah Patel?",
+    "fixture": "noah_graph_context.json",
+    "expected": {
+      "must_include": ["Weekly Lab Attendance", "Attendance Intervention Policy"],
+      "must_not_include": ["Financial Hold Policy"]
+    }
+  },
+  {
+    "id": "empty_sql_replan",
+    "techniques": ["ST"],
+    "layer": "replan",
+    "question": "Which students are at high risk?",
+    "expected": {}
+  },
+  {
+    "id": "offline_mode",
+    "techniques": ["ST"],
+    "layer": "infra",
+    "requires_llm": false,
+    "question": "Which students are at high risk?",
+    "expected": {
+      "mode": "offline_evidence",
+      "answer_must_include": ["Structured evidence"]
+    }
+  },
+  {
+    "id": "e2e_risk_table_intervention",
+    "techniques": ["DT", "EP"],
+    "layer": "e2e",
+    "question": "List at-risk students and explain the attendance intervention policy.",
+    "expected": {
+      "artifact_type": "table",
+      "min_row_count": 1,
+      "sources_must_contain": ["policies"],
+      "must_include": ["Attendance"]
+    }
+  },
+  {
+    "id": "e2e_hybrid_carlos",
+    "techniques": ["DT", "EP"],
+    "layer": "e2e",
+    "question": "Show Carlos Reyes balance and intervention paths.",
+    "expected": {
+      "min_path_count": 1,
+      "must_include": ["Carlos Reyes"]
+    }
+  }
+]

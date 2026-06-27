@@ -1,0 +1,47 @@
+{
+  "students": [
+    {
+      "student_name": "Carlos Reyes",
+      "risk_factors": {
+        "student_name": "Carlos Reyes",
+        "risk_factors": [
+          {
+            "student_name": "Carlos Reyes",
+            "risk_factor": "Balance Due Greater Than 500",
+            "source_doc": "student_risk_factors",
+            "evidence_text": "Notes mention overdue fees."
+          },
+          {
+            "student_name": "Carlos Reyes",
+            "risk_factor": "Irregular Attendance",
+            "source_doc": "student_risk_factors",
+            "evidence_text": "Notes mention irregular attendance and difficulty completing programming labs."
+          }
+        ],
+        "row_count": 2
+      },
+      "policy_paths": {
+        "student_name": "Carlos Reyes",
+        "paths": [
+          {
+            "student_name": "Carlos Reyes",
+            "risk_factor": "Balance Due Greater Than 500",
+            "policy": "Financial Hold Policy",
+            "intervention": "Financial Aid Review",
+            "source_doc": "policies"
+          },
+          {
+            "student_name": "Carlos Reyes",
+            "risk_factor": "Irregular Attendance",
+            "policy": "Attendance Intervention Policy",
+            "intervention": "Weekly Lab Attendance",
+            "source_doc": "policies"
+          }
+        ],
+        "row_count": 2
+      }
+    }
+  ],
+  "topic_matches": [],
+  "search_matches": []
+}

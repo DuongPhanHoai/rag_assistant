@@ -1,0 +1,28 @@
+{
+  "sql": "SELECT student_name, balance_due, risk_level\n        FROM student_risk_summary\n        WHERE risk_level = 'high'\n        ORDER BY balance_due DESC",
+  "columns": [
+    "student_name",
+    "balance_due",
+    "risk_level"
+  ],
+  "rows": [
+    {
+      "student_name": "Owen Smith",
+      "balance_due": 1100.0,
+      "risk_level": "high"
+    },
+    {
+      "student_name": "Carlos Reyes",
+      "balance_due": 900.0,
+      "risk_level": "high"
+    },
+    {
+      "student_name": "Lina Garcia",
+      "balance_due": 400.0,
+      "risk_level": "high"
+    }
+  ],
+  "row_count": 3,
+  "limited": false,
+  "warnings": []
+}

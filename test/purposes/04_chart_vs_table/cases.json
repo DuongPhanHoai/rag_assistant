@@ -1,0 +1,48 @@
+[
+  {
+    "id": "chart_attendance_trend",
+    "purpose": "04_chart_vs_table",
+    "layer": "pipeline",
+    "question": "Show attendance trend by month for at-risk students as a chart.",
+    "notes": "Time series chart from attendance_trend view.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": true,
+      "artifact_type": "chart"
+    },
+    "sql_must_contain": ["attendance"],
+    "sql_must_execute": true,
+    "must_include": ["chart", "attendance"]
+  },
+  {
+    "id": "chart_risk_distribution",
+    "purpose": "04_chart_vs_table",
+    "layer": "pipeline",
+    "question": "Visualize how many students fall into each risk_level as a chart.",
+    "notes": "Distribution chart from student_risk_summary counts.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": true,
+      "artifact_type": "chart"
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "table_course_averages",
+    "purpose": "04_chart_vs_table",
+    "layer": "pipeline",
+    "question": "Show each course with its average score and number of students as a table.",
+    "notes": "Tabular output only; chart optional but not required.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false,
+      "artifact_type": "table"
+    },
+    "sql_must_contain": ["course_performance_summary"],
+    "sql_must_execute": true
+  }
+]

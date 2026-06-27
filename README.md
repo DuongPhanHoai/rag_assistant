@@ -7,6 +7,7 @@ A small local sample for answering Student Management questions with:
 - An agentic workflow that plans, decomposes the request, runs read-only SQL, queries graph context, produces a table or Vega-Lite chart spec, replans if needed, and answers.
 
 The project uses LM Studio's OpenAI-compatible local chat API, Neo4j, and Python's built-in SQLite support.
+Next important move: test with bigger data > token count > control token > hybrid between 2 models (good model for planning, save cost for answer)
 
 ---
 

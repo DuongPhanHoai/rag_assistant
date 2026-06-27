@@ -1,0 +1,54 @@
+[
+  {
+    "id": "financial_hold",
+    "techniques": ["DT", "EP", "BR"],
+    "layer": "graph_only",
+    "question": "What balance triggers a financial hold?",
+    "graph_query": "Financial Hold Policy balance 500",
+    "expected": {
+      "sources_must_contain": ["policies"]
+    }
+  },
+  {
+    "id": "attendance_policy_search",
+    "techniques": ["DT", "EP"],
+    "layer": "graph_only",
+    "question": "Explain the attendance intervention policy thresholds.",
+    "graph_query": "Attendance Intervention Policy",
+    "expected": {
+      "sources_any_of": ["policies", "policy_rules"]
+    }
+  },
+  {
+    "id": "missing_policy",
+    "techniques": ["EP", "EX"],
+    "layer": "graph_only",
+    "question": "What is the drone operator certification policy?",
+    "graph_query": "drone operator certification policy",
+    "expected": {
+      "expect_empty_evidence": true
+    }
+  },
+  {
+    "id": "paraphrased_policy",
+    "techniques": ["EX"],
+    "layer": "answer",
+    "question": "When does the school follow up after too many missed classes?",
+    "fixture": "noah_graph_context.json",
+    "expected": {
+      "must_include": ["Attendance Intervention Policy"],
+      "must_not_include": ["3 absences"],
+      "sources_must_contain": ["policies"]
+    }
+  },
+  {
+    "id": "attendance_followup_pipeline",
+    "techniques": ["DT", "EP", "BR"],
+    "layer": "pipeline",
+    "question": "What attendance percentage triggers intervention follow-up?",
+    "expected": {
+      "must_include": ["75"],
+      "sources_must_contain": ["policies"]
+    }
+  }
+]

@@ -1,0 +1,81 @@
+{
+  "students": [
+    {
+      "student_name": "Noah Patel",
+      "risk_factors": {
+        "student_name": "Noah Patel",
+        "risk_factors": [
+          {
+            "student_name": "Noah Patel",
+            "risk_factor": "Irregular Attendance",
+            "source_doc": "student_risk_factors",
+            "evidence_text": "Commute issues affected March attendance."
+          }
+        ],
+        "row_count": 1
+      },
+      "policy_paths": {
+        "student_name": "Noah Patel",
+        "paths": [
+          {
+            "student_name": "Noah Patel",
+            "risk_factor": "Irregular Attendance",
+            "policy": "Attendance Intervention Policy",
+            "intervention": "Weekly Lab Attendance",
+            "source_doc": "policies"
+          }
+        ],
+        "row_count": 1
+      }
+    }
+  ],
+  "topic_matches": [
+    {
+      "query": "Irregular Attendance",
+      "matches": [
+        {
+          "labels": [
+            "RiskFactor"
+          ],
+          "name": "Irregular Attendance",
+          "relation": "TRIGGERS_POLICY",
+          "related_name": "Attendance Intervention Policy",
+          "source_doc": "policies",
+          "evidence_text": "Attendance below 75 percent requires advisor follow-up."
+        },
+        {
+          "labels": [
+            "Student"
+          ],
+          "name": "Carlos Reyes",
+          "relation": "HAS_RISK_FACTOR",
+          "related_name": "Irregular Attendance",
+          "source_doc": "student_risk_factors",
+          "evidence_text": "Notes mention irregular attendance and difficulty completing programming labs."
+        },
+        {
+          "labels": [
+            "Student"
+          ],
+          "name": "Owen Smith",
+          "relation": "HAS_RISK_FACTOR",
+          "related_name": "Irregular Attendance",
+          "source_doc": "student_risk_factors",
+          "evidence_text": "Advising notes mention missed labs and late project work."
+        },
+        {
+          "labels": [
+            "Student"
+          ],
+          "name": "Noah Patel",
+          "relation": "HAS_RISK_FACTOR",
+          "related_name": "Irregular Attendance",
+          "source_doc": "student_risk_factors",
+          "evidence_text": "Commute issues affected March attendance."
+        }
+      ],
+      "row_count": 4
+    }
+  ],
+  "search_matches": []
+}

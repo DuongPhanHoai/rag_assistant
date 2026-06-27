@@ -1,0 +1,33 @@
+[
+  {
+    "id": "e2e_at_risk_table_and_intervention",
+    "purpose": "07_end_to_end",
+    "layer": "e2e",
+    "question": "Identify students at risk this term, show them in a table with their advisor, and summarize what the intervention policy suggests for the highest-risk cases.",
+    "notes": "Full workflow: SQL table + graph policy context + grounded answer.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false,
+      "artifact_type": "table"
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "must_include": ["Owen Smith", "Carlos Reyes", "advisor"],
+    "any_of": ["intervention", "policy", "Financial", "Attendance"],
+    "expected_sources": ["policies"]
+  },
+  {
+    "id": "e2e_hybrid_carlos",
+    "purpose": "07_end_to_end",
+    "layer": "e2e",
+    "question": "Which high-risk students have the largest fee balances, and what intervention paths does the knowledge graph recommend for Carlos Reyes?",
+    "notes": "Hybrid ranking + named student graph paths.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "must_include": ["Owen Smith", "Carlos Reyes", "Financial Aid Review"],
+    "expected_sources": ["policies", "student_risk_factors"]
+  }
+]

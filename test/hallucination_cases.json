@@ -1,0 +1,114 @@
+[
+  {
+    "registry_id": "no_tools_policy_explain",
+    "suite": "planning",
+    "case_id": "no_tools_policy_explain",
+    "runnable": true,
+    "hallucination_type": "Tool hallucination",
+    "must_not_happen": "Planner must not call SQL/KG when user forbids querying data sources/tools."
+  },
+  {
+    "registry_id": "attendance_followup",
+    "suite": "kg",
+    "case_id": "attendance_followup_pipeline",
+    "runnable": true,
+    "hallucination_type": "Wrong policy threshold / generic replacement",
+    "must_not_happen": "Must not replace 75% with '3 absences' or vague 'too many classes'."
+  },
+  {
+    "registry_id": "attendance_followup",
+    "suite": "kg",
+    "case_id": "paraphrased_policy",
+    "runnable": true,
+    "hallucination_type": "Wrong policy threshold / generic replacement",
+    "must_not_happen": "Must not replace 75% with '3 absences' or vague 'too many classes'."
+  },
+  {
+    "registry_id": "financial_hold",
+    "suite": "kg",
+    "case_id": "financial_hold",
+    "runnable": true,
+    "hallucination_type": "Wrong financial threshold",
+    "must_not_happen": "Must not invent a different balance trigger than 500."
+  },
+  {
+    "registry_id": "missing_policy",
+    "suite": "kg",
+    "case_id": "missing_policy",
+    "runnable": true,
+    "hallucination_type": "Invented policy document/content",
+    "must_not_happen": "Must not invent drone policy content when none exists in data."
+  },
+  {
+    "registry_id": "unknown_student",
+    "suite": "graph",
+    "case_id": "unknown_student",
+    "runnable": true,
+    "hallucination_type": "Fabricated graph paths",
+    "must_not_happen": "Must not create risk/policy/intervention rows for unknown student."
+  },
+  {
+    "registry_id": "student_no_graph_data",
+    "suite": "graph",
+    "case_id": "student_no_graph_data",
+    "runnable": true,
+    "hallucination_type": "Fabricated graph details for low-data student",
+    "must_not_happen": "Must not invent extra risk factors/policies for Maya Tran if none in graph."
+  },
+  {
+    "registry_id": "e2e_risk_table_intervention",
+    "suite": "integration",
+    "case_id": "e2e_risk_table_intervention",
+    "runnable": true,
+    "hallucination_type": "Extra rows/policies beyond evidence",
+    "must_not_happen": "Answer must not add SQL rows or policies beyond evidence; policies must be in sources."
+  },
+  {
+    "registry_id": "e2e_hybrid_carlos",
+    "suite": "integration",
+    "case_id": "e2e_hybrid_carlos",
+    "runnable": true,
+    "hallucination_type": "Extra students/policies beyond evidence",
+    "must_not_happen": "Must not introduce extra students or policies not in SQL+graph evidence."
+  },
+  {
+    "registry_id": "fidelity_medium_risk",
+    "suite": "integration",
+    "case_id": "fidelity_medium_risk",
+    "runnable": true,
+    "hallucination_type": "Vague/no-reason explanations",
+    "must_not_happen": "Must not say 'no reason'; must use actual triggers from SQL fixture."
+  },
+  {
+    "registry_id": "fidelity_hybrid_carlos",
+    "suite": "integration",
+    "case_id": "fidelity_noah_paths",
+    "runnable": true,
+    "hallucination_type": "Dropped or invented graph paths",
+    "must_not_happen": "Must not drop real paths or invent extra ones beyond fixtures (Noah path case)."
+  },
+  {
+    "registry_id": "nonexistent_column",
+    "suite": "sql",
+    "case_id": "nonexistent_column",
+    "runnable": false,
+    "hallucination_type": "Schema / column hallucination",
+    "must_not_happen": "Planned SQL must not reference favorite_color."
+  },
+  {
+    "registry_id": "wrong_flag_type",
+    "suite": "sql",
+    "case_id": "wrong_flag_type",
+    "runnable": false,
+    "hallucination_type": "Flag misuse / implicit schema change",
+    "must_not_happen": "Must not treat scholarship_candidate as yes/true string."
+  },
+  {
+    "registry_id": "scholarship_thresholds",
+    "suite": "kg",
+    "case_id": "scholarship_thresholds",
+    "runnable": false,
+    "hallucination_type": "Wrong scholarship thresholds",
+    "must_not_happen": "Must match 85/85%/balance<=0; must not invent other rules."
+  }
+]

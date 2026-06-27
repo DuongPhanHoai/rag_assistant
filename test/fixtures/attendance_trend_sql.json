@@ -1,0 +1,88 @@
+{
+  "sql": "SELECT t.student_name, t.month, t.attendance_pct\n        FROM attendance_trend t\n        JOIN student_risk_summary r ON r.student_id = t.student_id AND r.term = t.term\n        WHERE r.risk_level IN ('high', 'medium')\n        ORDER BY t.student_name, t.month",
+  "columns": [
+    "student_name",
+    "month",
+    "attendance_pct"
+  ],
+  "rows": [
+    {
+      "student_name": "Carlos Reyes",
+      "month": "2026-01",
+      "attendance_pct": 56.25
+    },
+    {
+      "student_name": "Carlos Reyes",
+      "month": "2026-02",
+      "attendance_pct": 62.5
+    },
+    {
+      "student_name": "Carlos Reyes",
+      "month": "2026-03",
+      "attendance_pct": 50.0
+    },
+    {
+      "student_name": "Lina Garcia",
+      "month": "2026-01",
+      "attendance_pct": 81.25
+    },
+    {
+      "student_name": "Lina Garcia",
+      "month": "2026-02",
+      "attendance_pct": 68.75
+    },
+    {
+      "student_name": "Lina Garcia",
+      "month": "2026-03",
+      "attendance_pct": 62.5
+    },
+    {
+      "student_name": "Minh Nguyen",
+      "month": "2026-01",
+      "attendance_pct": 81.25
+    },
+    {
+      "student_name": "Minh Nguyen",
+      "month": "2026-02",
+      "attendance_pct": 81.25
+    },
+    {
+      "student_name": "Minh Nguyen",
+      "month": "2026-03",
+      "attendance_pct": 68.75
+    },
+    {
+      "student_name": "Noah Patel",
+      "month": "2026-01",
+      "attendance_pct": 93.75
+    },
+    {
+      "student_name": "Noah Patel",
+      "month": "2026-02",
+      "attendance_pct": 81.25
+    },
+    {
+      "student_name": "Noah Patel",
+      "month": "2026-03",
+      "attendance_pct": 68.75
+    },
+    {
+      "student_name": "Owen Smith",
+      "month": "2026-01",
+      "attendance_pct": 68.75
+    },
+    {
+      "student_name": "Owen Smith",
+      "month": "2026-02",
+      "attendance_pct": 56.25
+    },
+    {
+      "student_name": "Owen Smith",
+      "month": "2026-03",
+      "attendance_pct": 50.0
+    }
+  ],
+  "row_count": 15,
+  "limited": false,
+  "warnings": []
+}

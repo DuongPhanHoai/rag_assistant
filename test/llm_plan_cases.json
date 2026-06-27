@@ -1,0 +1,85 @@
+[
+  {
+    "id": "plan_sql_only",
+    "question": "Which students are at high risk?",
+    "notes": "Structured-only question. Planner should request SQL and skip graph/chart.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_graph_only",
+    "question": "What policy applies to irregular attendance?",
+    "notes": "Graph/policy question without a named student or chart request.",
+    "expected": {
+      "needs_sql": false,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_execute": false
+  },
+  {
+    "id": "plan_hybrid_noah",
+    "question": "What risk factors are linked to Noah Patel, and which policy and intervention path applies to irregular attendance?",
+    "notes": "Hybrid SQL + graph case for a named student and policy path.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["student_risk_factors", "students"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_hybrid_carlos",
+    "question": "Which high-risk students have the largest fee balances, and what intervention paths does the knowledge graph recommend for Carlos Reyes?",
+    "notes": "Hybrid ranking SQL plus graph intervention lookup.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["student_risk_summary"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_chart",
+    "question": "Create a chart of attendance trend by month for at-risk students.",
+    "notes": "Chart artifact question should set needs_chart and query attendance trend data.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": false,
+      "needs_chart": true
+    },
+    "sql_must_contain": ["attendance"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_scholarship",
+    "question": "Who qualifies for scholarship support based on GPA, attendance, and fee status?",
+    "notes": "Policy-grounded eligibility question.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["scholarship"],
+    "sql_must_execute": true
+  },
+  {
+    "id": "plan_course",
+    "question": "Show average grade by course and explain weak areas.",
+    "notes": "Course performance SQL with explanatory graph context.",
+    "expected": {
+      "needs_sql": true,
+      "needs_graph": true,
+      "needs_chart": false
+    },
+    "sql_must_contain": ["course_performance_summary"],
+    "sql_must_execute": true
+  }
+]
