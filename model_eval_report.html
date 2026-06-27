@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Model Eval Comparison Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --pass: #22c55e;
+      --fail: #ef4444;
+      --skip: #eab308;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border-bottom: 1px solid #334155;
+    }
+    header h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+    header p { margin: 0; color: var(--muted); }
+    main { padding: 1.5rem 2rem 3rem; max-width: 1400px; margin: 0 auto; }
+    h2 { margin: 2rem 0 1rem; font-size: 1.2rem; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    }
+    .card h3 { margin: 0 0 0.5rem; font-size: 0.95rem; word-break: break-word; }
+    .metric { font-size: 2rem; font-weight: 700; }
+    .sub { color: var(--muted); font-size: 0.85rem; margin-top: 0.35rem; }
+    .stats-row { display: flex; gap: 0.75rem; margin: 0.5rem 0; font-size: 0.85rem; }
+    .pass { color: var(--pass); }
+    .fail { color: var(--fail); }
+    .skip { color: var(--skip); }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 960px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-box {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 320px;
+    }
+    .chart-box.tall { min-height: 720px; }
+    .chart-box canvas { max-height: 680px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.85rem;
+    }
+    th, td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #334155; text-align: left; }
+    th { background: #334155; position: sticky; top: 0; }
+    tr:hover { background: rgba(255,255,255,.03); }
+    .status-pass { color: var(--pass); font-weight: 600; }
+    .status-fail { color: var(--fail); font-weight: 600; }
+    .status-skip { color: var(--skip); font-weight: 600; }
+    .table-wrap { overflow: auto; max-height: 640px; border-radius: 12px; }
+    code { font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Model Evaluation Comparison</h1>
+    <p>3 runs · 50 test cases · Generated 2026-06-27 11:01:02</p>
+  </header>
+  <main>
+    <h2>Summary</h2>
+    <div class="cards">
+            <div class="card" style="border-top: 4px solid #4f46e5">
+              <h3>google/gemma-4-12b-qat</h3>
+              <div class="metric">91.8%</div>
+              <div class="sub">pass rate (excl. skip)</div>
+              <div class="stats-row">
+                <span class="pass">45 pass</span>
+                <span class="fail">4 fail</span>
+                <span class="skip">1 skip</span>
+              </div>
+              <div class="sub">Total run: 764s (12.7 min)</div>
+              <div class="sub">2026-06-27T03:19:33 UTC</div>
+            </div>
+            
+            <div class="card" style="border-top: 4px solid #059669">
+              <h3>google/gemma-4-e4b</h3>
+              <div class="metric">91.8%</div>
+              <div class="sub">pass rate (excl. skip)</div>
+              <div class="stats-row">
+                <span class="pass">45 pass</span>
+                <span class="fail">4 fail</span>
+                <span class="skip">1 skip</span>
+              </div>
+              <div class="sub">Total run: 241s (4.0 min)</div>
+              <div class="sub">2026-06-27T03:33:40 UTC</div>
+            </div>
+            
+            <div class="card" style="border-top: 4px solid #d97706">
+              <h3>qwen/qwen3-4b-thinking-2507</h3>
+              <div class="metric">79.6%</div>
+              <div class="sub">pass rate (excl. skip)</div>
+              <div class="stats-row">
+                <span class="pass">39 pass</span>
+                <span class="fail">10 fail</span>
+                <span class="skip">1 skip</span>
+              </div>
+              <div class="sub">Total run: 1176s (19.6 min)</div>
+              <div class="sub">2026-06-27T03:38:41 UTC</div>
+            </div>
+            </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h2>Pass rate (%)</h2>
+        <canvas id="passChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>Total run duration (seconds)</h2>
+        <canvas id="durationChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-box" style="margin-top:1.25rem">
+      <h2>Pass rate by suite (%)</h2>
+      <canvas id="suiteChart"></canvas>
+    </div>
+
+    <div class="chart-box tall" style="margin-top:1.25rem">
+      <h2>Duration per test case (seconds)</h2>
+      <canvas id="timingChart"></canvas>
+    </div>
+
+    <h2>Full results matrix</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Suite</th><th>Case</th><th>Layer</th><th>google/gemma-4-12b-qat</th><th>google/gemma-4-e4b</th><th>qwen/qwen3-4b-thinking-2507</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>chart</td><td><code>chart_no_data</code></td><td>artifact_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>chart</td><td><code>chart_single_month</code></td><td>artifact_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>chart</td><td><code>table_risk_summary</code></td><td>artifact_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>chart</td><td><code>timeseries_attendance</code></td><td>artifact_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>chart</td><td><code>timeseries_attendance_pipeline</code></td><td>pipeline</td><td class="status-pass">PASS (45.6s)</td><td class="status-pass">PASS (5.6s)</td><td class="status-pass">PASS (26.9s)</td></tr><tr><td>graph</td><td><code>carlos_intervention_paths</code></td><td>graph_only</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td></tr><tr><td>graph</td><td><code>noah_irregular_attendance</code></td><td>graph_only</td><td class="status-pass">PASS (6.1s)</td><td class="status-pass">PASS (6.1s)</td><td class="status-pass">PASS (6.2s)</td></tr><tr><td>graph</td><td><code>owen_risk_factors</code></td><td>graph_only</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td></tr><tr><td>graph</td><td><code>path_irregular_attendance_generic</code></td><td>graph_only</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.0s)</td></tr><tr><td>graph</td><td><code>student_no_graph_data</code></td><td>graph_only</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td><td class="status-pass">PASS (4.1s)</td></tr><tr><td>graph</td><td><code>topic_irregular_attendance</code></td><td>graph_only</td><td class="status-pass">PASS (2.1s)</td><td class="status-pass">PASS (2.1s)</td><td class="status-pass">PASS (2.0s)</td></tr><tr><td>graph</td><td><code>unknown_student</code></td><td>graph_only</td><td class="status-pass">PASS (2.1s)</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.1s)</td></tr><tr><td>integration</td><td><code>e2e_hybrid_carlos</code></td><td>e2e</td><td class="status-pass">PASS (30.7s)</td><td class="status-pass">PASS (18.6s)</td><td class="status-fail">FAIL (91.5s)</td></tr><tr><td>integration</td><td><code>e2e_risk_table_intervention</code></td><td>e2e</td><td class="status-pass">PASS (73.3s)</td><td class="status-fail">FAIL (17.7s)</td><td class="status-pass">PASS (46.7s)</td></tr><tr><td>integration</td><td><code>empty_sql_replan</code></td><td>replan</td><td class="status-pass">PASS (9.5s)</td><td class="status-pass">PASS (4.4s)</td><td class="status-pass">PASS (19.7s)</td></tr><tr><td>integration</td><td><code>fidelity_medium_risk</code></td><td>fidelity</td><td class="status-pass">PASS (18.3s)</td><td class="status-pass">PASS (11.0s)</td><td class="status-pass">PASS (15.8s)</td></tr><tr><td>integration</td><td><code>fidelity_noah_paths</code></td><td>fidelity</td><td class="status-pass">PASS (9.4s)</td><td class="status-pass">PASS (6.9s)</td><td class="status-pass">PASS (14.5s)</td></tr><tr><td>integration</td><td><code>offline_mode</code></td><td>infra</td><td class="status-skip">SKIP (0.0s)</td><td class="status-skip">SKIP (0.0s)</td><td class="status-skip">SKIP (0.0s)</td></tr><tr><td>kg</td><td><code>attendance_followup_pipeline</code></td><td>pipeline</td><td class="status-fail">FAIL (25.9s)</td><td class="status-fail">FAIL (13.8s)</td><td class="status-fail">FAIL (46.4s)</td></tr><tr><td>kg</td><td><code>attendance_followup_pipeline_passed_gemma12b</code></td><td>pipeline</td><td class="status-pass">PASS (23.2s)</td><td class="status-pass">PASS (15.1s)</td><td class="status-fail">FAIL (39.1s)</td></tr><tr><td>kg</td><td><code>attendance_policy_search</code></td><td>graph_only</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.1s)</td></tr><tr><td>kg</td><td><code>financial_hold</code></td><td>graph_only</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.1s)</td></tr><tr><td>kg</td><td><code>missing_policy</code></td><td>graph_only</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.0s)</td><td class="status-pass">PASS (2.1s)</td></tr><tr><td>kg</td><td><code>paraphrased_policy</code></td><td>answer</td><td class="status-pass">PASS (13.7s)</td><td class="status-pass">PASS (6.8s)</td><td class="status-pass">PASS (9.8s)</td></tr><tr><td>planning</td><td><code>ambiguous_graph_word</code></td><td>plan</td><td class="status-pass">PASS (21.1s)</td><td class="status-pass">PASS (6.9s)</td><td class="status-fail">FAIL (91.3s)</td></tr><tr><td>planning</td><td><code>chart_plus_policy</code></td><td>plan</td><td class="status-fail">FAIL (91.5s)</td><td class="status-pass">PASS (7.3s)</td><td class="status-fail">FAIL (91.4s)</td></tr><tr><td>planning</td><td><code>chart_routing</code></td><td>plan</td><td class="status-pass">PASS (15.1s)</td><td class="status-pass">PASS (7.2s)</td><td class="status-pass">PASS (57.1s)</td></tr><tr><td>planning</td><td><code>combined_risk_intervention</code></td><td>plan</td><td class="status-pass">PASS (19.1s)</td><td class="status-pass">PASS (6.7s)</td><td class="status-fail">FAIL (91.4s)</td></tr><tr><td>planning</td><td><code>empty_question</code></td><td>plan</td><td class="status-fail">FAIL (91.4s)</td><td class="status-fail">FAIL (0.7s)</td><td class="status-pass">PASS (5.4s)</td></tr><tr><td>planning</td><td><code>explicit_table_only</code></td><td>plan</td><td class="status-pass">PASS (19.5s)</td><td class="status-pass">PASS (4.8s)</td><td class="status-pass">PASS (20.4s)</td></tr><tr><td>planning</td><td><code>graph_only_path</code></td><td>plan</td><td class="status-pass">PASS (12.1s)</td><td class="status-pass">PASS (4.2s)</td><td class="status-pass">PASS (22.6s)</td></tr><tr><td>planning</td><td><code>hybrid_carlos_balance</code></td><td>plan</td><td class="status-pass">PASS (21.5s)</td><td class="status-pass">PASS (10.9s)</td><td class="status-fail">FAIL (91.4s)</td></tr><tr><td>planning</td><td><code>hybrid_noah_path</code></td><td>plan</td><td class="status-pass">PASS (26.2s)</td><td class="status-pass">PASS (6.2s)</td><td class="status-fail">FAIL (91.4s)</td></tr><tr><td>planning</td><td><code>kg_only_policy</code></td><td>plan</td><td class="status-pass">PASS (11.5s)</td><td class="status-pass">PASS (4.2s)</td><td class="status-pass">PASS (14.8s)</td></tr><tr><td>planning</td><td><code>multi_intent</code></td><td>plan</td><td class="status-pass">PASS (27.9s)</td><td class="status-pass">PASS (10.5s)</td><td class="status-fail">FAIL (91.4s)</td></tr><tr><td>planning</td><td><code>no_tools_policy_explain</code></td><td>plan</td><td class="status-pass">PASS (9.4s)</td><td class="status-pass">PASS (2.4s)</td><td class="status-pass">PASS (11.7s)</td></tr><tr><td>planning</td><td><code>off_topic</code></td><td>plan</td><td class="status-pass">PASS (10.0s)</td><td class="status-pass">PASS (3.6s)</td><td class="status-pass">PASS (7.5s)</td></tr><tr><td>planning</td><td><code>plan_course_weak</code></td><td>plan</td><td class="status-pass">PASS (16.2s)</td><td class="status-pass">PASS (5.5s)</td><td class="status-pass">PASS (55.3s)</td></tr><tr><td>planning</td><td><code>plan_scholarship</code></td><td>plan</td><td class="status-fail">FAIL (20.0s)</td><td class="status-fail">FAIL (4.9s)</td><td class="status-fail">FAIL (13.9s)</td></tr><tr><td>planning</td><td><code>sql_only_enrollment</code></td><td>plan</td><td class="status-pass">PASS (14.0s)</td><td class="status-pass">PASS (6.2s)</td><td class="status-pass">PASS (19.1s)</td></tr><tr><td>planning</td><td><code>sql_only_fee_balance</code></td><td>plan</td><td class="status-pass">PASS (14.4s)</td><td class="status-pass">PASS (3.6s)</td><td class="status-pass">PASS (14.9s)</td></tr><tr><td>planning</td><td><code>sql_only_named_student</code></td><td>plan</td><td class="status-pass">PASS (21.6s)</td><td class="status-pass">PASS (5.4s)</td><td class="status-pass">PASS (10.6s)</td></tr><tr><td>planning</td><td><code>sql_only_risk</code></td><td>plan</td><td class="status-pass">PASS (9.1s)</td><td class="status-pass">PASS (4.9s)</td><td class="status-pass">PASS (16.3s)</td></tr><tr><td>sql</td><td><code>enrollment_list_c101</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>sql</td><td><code>fee_balance_ranking</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>sql</td><td><code>invalid_sql_mutating</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>sql</td><td><code>risk_summary_pipeline</code></td><td>pipeline</td><td class="status-pass">PASS (12.6s)</td><td class="status-pass">PASS (4.5s)</td><td class="status-pass">PASS (16.7s)</td></tr><tr><td>sql</td><td><code>risk_summary_table</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>sql</td><td><code>scholarship_filter</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr><tr><td>sql</td><td><code>top_by_avg_score</code></td><td>sql_only</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td><td class="status-pass">PASS (0.0s)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script>
+    const DATA = {"labels": ["google/gemma-4-12b-qat", "google/gemma-4-e4b", "qwen/qwen3-4b-thinking-2507"], "passPct": [91.8, 91.8, 79.6], "totalSeconds": [764.385, 241.305, 1175.566], "suites": ["chart", "graph", "integration", "kg", "planning", "sql"], "suiteDatasets": [{"label": "google/gemma-4-12b-qat", "data": [100.0, 100.0, 100.0, 83.3, 84.2, 100.0], "backgroundColor": "#4f46e5"}, {"label": "google/gemma-4-e4b", "data": [100.0, 100.0, 80.0, 83.3, 89.5, 100.0], "backgroundColor": "#059669"}, {"label": "qwen/qwen3-4b-thinking-2507", "data": [100.0, 100.0, 80.0, 66.7, 63.2, 100.0], "backgroundColor": "#d97706"}], "timingLabels": ["chart/chart_no_data", "chart/chart_single_month", "chart/table_risk_summary", "chart/timeseries_attendance", "chart/timeseries_attendance_pipeline", "graph/carlos_intervention_paths", "graph/noah_irregular_attendance", "graph/owen_risk_factors", "graph/path_irregular_attendance_generic", "graph/student_no_graph_data", "graph/topic_irregular_attendance", "graph/unknown_student", "integration/e2e_hybrid_carlos", "integration/e2e_risk_table_intervention", "integration/empty_sql_replan", "integration/fidelity_medium_risk", "integration/fidelity_noah_paths", "integration/offline_mode", "kg/attendance_followup_pipeline", "kg/attendance_followup_pipeline_passed_gemma12b", "kg/attendance_policy_search", "kg/financial_hold", "kg/missing_policy", "kg/paraphrased_policy", "planning/ambiguous_graph_word", "planning/chart_plus_policy", "planning/chart_routing", "planning/combined_risk_intervention", "planning/empty_question", "planning/explicit_table_only", "planning/graph_only_path", "planning/hybrid_carlos_balance", "planning/hybrid_noah_path", "planning/kg_only_policy", "planning/multi_intent", "planning/no_tools_policy_explain", "planning/off_topic", "planning/plan_course_weak", "planning/plan_scholarship", "planning/sql_only_enrollment", "planning/sql_only_fee_balance", "planning/sql_only_named_student", "planning/sql_only_risk", "sql/enrollment_list_c101", "sql/fee_balance_ranking", "sql/invalid_sql_mutating", "sql/risk_summary_pipeline", "sql/risk_summary_table", "sql/scholarship_filter", "sql/top_by_avg_score"], "timingDatasets": [{"label": "google/gemma-4-12b-qat", "data": [0, 0, 0, 0, 45.6, 4.1, 6.1, 4.1, 2.0, 4.1, 2.1, 2.1, 30.7, 73.3, 9.5, 18.3, 9.4, 0, 25.9, 23.2, 2.0, 2.0, 2.0, 13.7, 21.1, 91.5, 15.1, 19.1, 91.4, 19.5, 12.1, 21.5, 26.2, 11.5, 27.9, 9.4, 10.0, 16.2, 20.0, 14.0, 14.4, 21.6, 9.1, 0, 0, 0, 12.6, 0, 0, 0], "backgroundColor": "#4f46e5"}, {"label": "google/gemma-4-e4b", "data": [0, 0, 0, 0, 5.6, 4.1, 6.1, 4.1, 2.0, 4.1, 2.1, 2.0, 18.6, 17.7, 4.4, 11.0, 6.9, 0, 13.8, 15.1, 2.0, 2.0, 2.0, 6.8, 6.9, 7.3, 7.2, 6.7, 0.7, 4.8, 4.2, 10.9, 6.2, 4.2, 10.5, 2.4, 3.6, 5.5, 4.9, 6.2, 3.6, 5.4, 4.9, 0, 0, 0, 4.5, 0, 0, 0], "backgroundColor": "#059669"}, {"label": "qwen/qwen3-4b-thinking-2507", "data": [0, 0, 0, 0, 26.9, 4.1, 6.2, 4.1, 2.0, 4.1, 2.0, 2.1, 91.5, 46.7, 19.7, 15.8, 14.5, 0, 46.4, 39.1, 2.1, 2.1, 2.1, 9.8, 91.3, 91.4, 57.1, 91.4, 5.4, 20.4, 22.6, 91.4, 91.4, 14.8, 91.4, 11.7, 7.5, 55.3, 13.9, 19.1, 14.9, 10.6, 16.3, 0, 0, 0, 16.7, 0, 0, 0], "backgroundColor": "#d97706"}]};
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { labels: { color: '#e2e8f0' } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+      }
+    };
+
+    new Chart(document.getElementById('passChart'), {
+      type: 'bar',
+      data: {
+        labels: DATA.labels,
+        datasets: [{
+          label: 'Pass %',
+          data: DATA.passPct,
+          backgroundColor: DATA.labels.map((_, i) => ['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2'][i % 6])
+        }]
+      },
+      options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 100, title: { display: true, text: '%', color: '#94a3b8' } } } }
+    });
+
+    new Chart(document.getElementById('durationChart'), {
+      type: 'bar',
+      data: {
+        labels: DATA.labels,
+        datasets: [{
+          label: 'Total seconds',
+          data: DATA.totalSeconds,
+          backgroundColor: DATA.labels.map((_, i) => ['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2'][i % 6])
+        }]
+      },
+      options: commonOptions
+    });
+
+    new Chart(document.getElementById('suiteChart'), {
+      type: 'bar',
+      data: {
+        labels: DATA.suites,
+        datasets: DATA.suiteDatasets
+      },
+      options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 100 } } }
+    });
+
+    new Chart(document.getElementById('timingChart'), {
+      type: 'bar',
+      data: {
+        labels: DATA.timingLabels,
+        datasets: DATA.timingDatasets
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#e2e8f0' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, title: { display: true, text: 'seconds', color: '#94a3b8' } },
+          y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
